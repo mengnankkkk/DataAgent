@@ -52,6 +52,16 @@ spring:
         max-sql-retry-count: 10
         max-sql-optimize-count: 10
         sql-score-threshold: 0.95
+        # Tavily 搜索配置
+        tavily:
+          enabled: false  # 默认关闭，需要时设置为 true
+          api-key: ${TAVILY_API_KEY:}
+          base-url: https://api.tavily.com
+          default-max-results: 5
+          default-search-depth: basic
+          timeout: 30
+          default-include-answer: true
+          default-include-raw-content: false
   servlet:
     multipart:
       max-file-size: 10MB

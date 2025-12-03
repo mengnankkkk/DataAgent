@@ -390,4 +390,58 @@ public class PromptHelper {
 		}
 	}
 
+	// ==================== Deep Research Prompts ====================
+
+	/**
+	 * 构建关键词提取提示词
+	 * @param question 用户问题
+	 * @return 关键词提取提示词
+	 */
+	public static String buildKeywordExtractionPrompt(String question) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("question", question);
+		return PromptConstant.getKeywordExtractionPromptTemplate().render(params);
+	}
+
+	/**
+	 * 构建关键词优化提示词
+	 * @param question 用户问题
+	 * @param researchSummary 已有研究摘要
+	 * @return 关键词优化提示词
+	 */
+	public static String buildKeywordRefinementPrompt(String question, String researchSummary) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("question", question);
+		params.put("research_summary", researchSummary);
+		return PromptConstant.getKeywordRefinementPromptTemplate().render(params);
+	}
+
+	/**
+	 * 构建信息充分性判断提示词
+	 * @param question 用户问题
+	 * @param collectedInfo 已收集信息
+	 * @return 信息充分性判断提示词
+	 */
+	public static String buildInfoSufficiencyPrompt(String question, String collectedInfo) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("question", question);
+		params.put("collected_info", collectedInfo);
+		return PromptConstant.getInfoSufficiencyJudgmentPromptTemplate().render(params);
+	}
+
+	/**
+	 * 构建因果对齐分析提示词
+	 * @param question 用户问题
+	 * @param sqlDataSummary SQL数据摘要
+	 * @param researchSummary 研究摘要
+	 * @return 因果对齐分析提示词
+	 */
+	public static String buildCausalAlignmentPrompt(String question, String sqlDataSummary, String researchSummary) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("question", question);
+		params.put("sql_data_summary", sqlDataSummary);
+		params.put("research_summary", researchSummary);
+		return PromptConstant.getCausalAlignmentPromptTemplate().render(params);
+	}
+
 }

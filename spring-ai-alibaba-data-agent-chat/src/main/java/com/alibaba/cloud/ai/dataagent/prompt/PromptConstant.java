@@ -112,4 +112,22 @@ public class PromptConstant {
 		return new PromptTemplate(PromptLoader.loadPrompt("json-fix"));
 	}
 
+	// ==================== Deep Research Prompts ====================
+
+	public static PromptTemplate getKeywordExtractionPromptTemplate() {
+		return new PromptTemplate(PromptLoader.loadPrompt("keyword-extraction"));
+	}
+
+	public static PromptTemplate getKeywordRefinementPromptTemplate() {
+		return new PromptTemplate(PromptLoader.loadPrompt("keyword-refinement"));
+	}
+
+	public static PromptTemplate getInfoSufficiencyJudgmentPromptTemplate() {
+		return new PromptTemplate(PromptLoader.loadPrompt("info-sufficiency-judgment"));
+	}
+
+	public static PromptTemplate getCausalAlignmentPromptTemplate() {
+		return new PromptTemplate(PromptLoader.loadPrompt("causal-alignment"));
+	}
+
 }

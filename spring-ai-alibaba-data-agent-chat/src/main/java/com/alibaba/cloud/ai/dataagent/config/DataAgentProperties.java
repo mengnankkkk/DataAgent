@@ -16,6 +16,7 @@
 
 package com.alibaba.cloud.ai.dataagent.config;
 
+import com.alibaba.cloud.ai.dataagent.common.config.TavilyProperties;
 import com.alibaba.cloud.ai.dataagent.constant.Constant;
 import com.alibaba.cloud.ai.dataagent.service.llm.LlmServiceEnum;
 import lombok.Getter;
@@ -38,6 +39,8 @@ public class DataAgentProperties {
 	private EmbeddingBatch embeddingBatch = new EmbeddingBatch();
 
 	private VectorStoreProperties vectorStore = new VectorStoreProperties();
+
+	private TavilyProperties tavily = new TavilyProperties();
 
 	/**
 	 * sql执行失败重试次数

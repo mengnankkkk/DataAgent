@@ -138,7 +138,8 @@ public final class Constant {
 
 	public static final String PYTHON_TRIES_COUNT = "PYTHON_TRIES_COUNT";
 
-	// If code execution succeeds, output code running result; if fails, output error
+	// If code execution succeeds, output code running result; if fails, output
+	// error
 	// information
 	public static final String PYTHON_EXECUTE_NODE_OUTPUT = "PYTHON_EXECUTE_NODE_OUTPUT";
 
@@ -151,5 +152,27 @@ public final class Constant {
 
 	// 人类复核相关
 	public static final String HUMAN_REVIEW_ENABLED = "HUMAN_REVIEW_ENABLED";
+
+	// Web Search Node
+	public static final String WEB_SEARCH_NODE = "WEB_SEARCH_NODE";
+
+	public static final String WEB_SEARCH_NODE_OUTPUT = "WEB_SEARCH_NODE_OUTPUT";
+
+	// Deep Research Node
+	public static final String DEEP_RESEARCH_NODE = "DEEP_RESEARCH_NODE";
+
+	public static final String RESEARCH_ITERATION_COUNT = "RESEARCH_ITERATION_COUNT";
+
+	public static final String RESEARCH_KEYWORDS = "RESEARCH_KEYWORDS";
+
+	public static final String RESEARCH_RESULTS = "RESEARCH_RESULTS";
+
+	public static final String RESEARCH_INFO_SUFFICIENT = "RESEARCH_INFO_SUFFICIENT";
+
+	public static final String RESEARCH_SUMMARY = "RESEARCH_SUMMARY";
+
+	public static final String CAUSAL_ANALYSIS_NODE = "CAUSAL_ANALYSIS_NODE";
+
+	public static final String CAUSAL_ANALYSIS_OUTPUT = "CAUSAL_ANALYSIS_OUTPUT";
 
 }
