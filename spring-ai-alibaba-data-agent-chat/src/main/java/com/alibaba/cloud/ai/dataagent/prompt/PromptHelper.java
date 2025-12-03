@@ -243,15 +243,19 @@ public class PromptHelper {
 	 * Build report generation prompt with custom prompt
 	 * @param userRequirementsAndPlan user requirements and plan
 	 * @param analysisStepsAndData analysis steps and data
+	 * @param externalResearch external research and causal analysis (DeepResearch)
 	 * @param summaryAndRecommendations summary and recommendations
+	 * @param optimizationConfigs optional user-defined optimization configs
 	 * @return built prompt
 	 */
 	public static String buildReportGeneratorPromptWithOptimization(String userRequirementsAndPlan,
-			String analysisStepsAndData, String summaryAndRecommendations, List<UserPromptConfig> optimizationConfigs) {
+			String analysisStepsAndData, String externalResearch, String summaryAndRecommendations,
+			List<UserPromptConfig> optimizationConfigs) {
 
 		Map<String, Object> params = new HashMap<>();
 		params.put("user_requirements_and_plan", userRequirementsAndPlan);
 		params.put("analysis_steps_and_data", analysisStepsAndData);
+		params.put("external_research", externalResearch);
 		params.put("summary_and_recommendations", summaryAndRecommendations);
 
 		// Build optional optimization section content from user configs

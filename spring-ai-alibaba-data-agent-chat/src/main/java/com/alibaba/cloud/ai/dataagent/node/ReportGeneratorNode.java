@@ -81,7 +81,11 @@ public class ReportGeneratorNode implements NodeAction {
 		HashMap<String, String> executionResults = StateUtil.getObjectValue(state, SQL_EXECUTE_NODE_OUTPUT,
 				HashMap.class, new HashMap<>());
 
+		// Get external research data (DeepResearch causal analysis)
+		String externalResearch = StateUtil.getStringValue(state, CAUSAL_ANALYSIS_OUTPUT);
+
 		log.info("Planner node output: {}", plannerNodeOutput);
+		log.info("External research available: {}", externalResearch != null && !externalResearch.isEmpty());
 
 		// Parse plan and get current step
 		Plan plan = converter.convert(plannerNodeOutput);
@@ -102,7 +106,7 @@ public class ReportGeneratorNode implements NodeAction {
 
 		// Generate report streaming flux
 		Flux<ChatResponse> reportGenerationFlux = generateReport(userInput, plan, executionResults,
-				summaryAndRecommendations, agentId);
+				summaryAndRecommendations, externalResearch, agentId);
 
 		// Use utility class to create streaming generator with content collection
 		Flux<GraphResponse<StreamingOutput>> generator = FluxUtil.createStreamingGeneratorWithMessages(this.getClass(),
@@ -143,12 +147,15 @@ public class ReportGeneratorNode implements NodeAction {
 	 * Generates the analysis report.
 	 */
 	private Flux<ChatResponse> generateReport(String userInput, Plan plan, HashMap<String, String> executionResults,
-			String summaryAndRecommendations, Long agentId) {
+			String summaryAndRecommendations, String externalResearch, Long agentId) {
 		// Build user requirements and plan description
 		String userRequirementsAndPlan = buildUserRequirementsAndPlan(userInput, plan);
 
 		// Build analysis steps and data results description
 		String analysisStepsAndData = buildAnalysisStepsAndData(plan, executionResults);
+
+		// Build external research section (if available)
+		String externalResearchSection = buildExternalResearch(externalResearch);
 
 		// Get optimization configs if available (优先按智能体加载)
 		List<UserPromptConfig> optimizationConfigs = promptConfigService.getOptimizationConfigs("report-generator",
@@ -156,7 +163,7 @@ public class ReportGeneratorNode implements NodeAction {
 
 		// Use PromptHelper to build report generation prompt with optimization support
 		String reportPrompt = PromptHelper.buildReportGeneratorPromptWithOptimization(userRequirementsAndPlan,
-				analysisStepsAndData, summaryAndRecommendations, optimizationConfigs);
+				analysisStepsAndData, externalResearchSection, summaryAndRecommendations, optimizationConfigs);
 
 		log.info("Using {} prompt for report generation",
 				!optimizationConfigs.isEmpty() ? "optimized (" + optimizationConfigs.size() + " configs)" : "default");
@@ -232,6 +239,23 @@ public class ReportGeneratorNode implements NodeAction {
 				sb.append("**执行结果**: \n```json\n").append(stepResult).append("\n```\n\n");
 			}
 		}
+
+		return sb.toString();
+	}
+
+	/**
+	 * Builds external research section (DeepResearch causal analysis).
+	 */
+	private String buildExternalResearch(String externalResearch) {
+		if (externalResearch == null || externalResearch.trim().isEmpty()) {
+			return "暂无外部环境研究数据";
+		}
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("## 外部环境研究\n\n");
+		sb.append("### 因果关联分析\n");
+		sb.append(externalResearch).append("\n\n");
+		sb.append("**说明**: 以上内容基于外部搜索和深度研究，分析了外部因素（市场、竞争、政策等）与内部数据的因果关联。\n");
 
 		return sb.toString();
 	}
