@@ -267,30 +267,81 @@ public class SchemaServiceImpl implements SchemaService {
 			List<Document> tableDocuments) {
 
 		Assert.hasText(agentId, "agentId cannot be empty");
+        //去重
+		List<String> processedKeywords = preprocessKeywords(keywords);
+		log.info("Preprocessed keywords from {} to {}: {}", keywords.size(), processedKeywords.size(),
+				processedKeywords);
 
 		List<Document> allResults = new ArrayList<>();
 		Set<String> seenDocumentIds = new HashSet<>();
-		for (String kw : keywords) {
-			List<Document> docs = agentVectorStoreService.getDocumentsForAgent(agentId, kw,
-					DocumentMetadataConstant.COLUMN);
-			if (CollectionUtils.isEmpty(docs)) {
-				continue;
-			}
+		int successCount = 0;
+		int failureCount = 0;
 
-			List<Document> filterDocs = filterColumnsWithMatchingTables(docs, tableDocuments);
-			if (CollectionUtils.isEmpty(filterDocs))
-				continue;
-
-			for (Document doc : filterDocs) {
-				String docId = doc.getId();
-				if (seenDocumentIds.add(docId)) {
-					allResults.add(doc);
+		for (String kw : processedKeywords) {
+			try {
+				List<Document> docs = agentVectorStoreService.getDocumentsForAgent(agentId, kw,
+						DocumentMetadataConstant.COLUMN);
+				if (CollectionUtils.isEmpty(docs)) {
+					continue;
 				}
-			}
 
+				List<Document> filterDocs = filterColumnsWithMatchingTables(docs, tableDocuments);
+				if (CollectionUtils.isEmpty(filterDocs))
+					continue;
+
+				for (Document doc : filterDocs) {
+					String docId = doc.getId();
+					if (seenDocumentIds.add(docId)) {
+						allResults.add(doc);
+					}
+				}
+				successCount++;
+			}
+			catch (Exception e) {
+				failureCount++;
+				log.warn("Failed to get column documents for keyword '{}', continuing with remaining keywords. Error: {}",
+						kw, e.getMessage());
+				// 继续处理其他关键词
+			}
 		}
 
+		log.info(
+				"Column retrieval completed: {} keywords processed successfully, {} failed, {} unique documents retrieved",
+				successCount, failureCount, allResults.size());
+
 		return allResults;
+	}
+
+	/**
+	 * 预处理关键词：去重、过滤停用词、限制数量
+	 */
+	private List<String> preprocessKeywords(List<String> keywords) {
+		if (CollectionUtils.isEmpty(keywords)) {
+			return new ArrayList<>();
+		}
+
+		// 定义停用词列表（常见但对召回无帮助的词）
+		Set<String> stopWords = Set.of("的", "了", "在", "是", "有", "和", "与", "或", "但", "等", "中", "为", "以", "及", "个",
+				"对", "于", "从", "到", "由", "被", "将", "会", "可", "能", "要", "这", "那", "该", "此", "列表", "记录", "信息", "数据");
+
+		// 去重并过滤停用词
+		Set<String> uniqueKeywords = new LinkedHashSet<>();
+		for (String kw : keywords) {
+			String trimmed = kw.trim();
+			// 过滤空字符串、单字符（通常无意义）和停用词
+			if (!trimmed.isEmpty() && trimmed.length() > 1 && !stopWords.contains(trimmed)) {
+				uniqueKeywords.add(trimmed);
+			}
+		}
+
+		// 限制关键词数量为最多5个（减少API调用）
+		List<String> result = new ArrayList<>(uniqueKeywords);
+		if (result.size() > 5) {
+			log.info("Limiting keywords from {} to 5 to reduce API calls", result.size());
+			result = result.subList(0, 5);
+		}
+
+		return result;
 	}
 
 	/**
