@@ -17,6 +17,7 @@
 package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.entity.Datasource;
+import com.alibaba.cloud.ai.dataagent.entity.LogicalRelation;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
 import lombok.AllArgsConstructor;
@@ -46,11 +47,9 @@ public class DatasourceController {
 
 		if (status != null && !status.isEmpty()) {
 			datasources = datasourceService.getDatasourceByStatus(status);
-		}
-		else if (type != null && !type.isEmpty()) {
+		} else if (type != null && !type.isEmpty()) {
 			datasources = datasourceService.getDatasourceByType(type);
-		}
-		else {
+		} else {
 			datasources = datasourceService.getAllDatasource();
 		}
 
@@ -65,8 +64,7 @@ public class DatasourceController {
 		Datasource datasource = datasourceService.getDatasourceById(id);
 		if (datasource != null) {
 			return ResponseEntity.ok(datasource);
-		}
-		else {
+		} else {
 			return ResponseEntity.notFound().build();
 		}
 	}
@@ -76,8 +74,7 @@ public class DatasourceController {
 		try {
 			List<String> tables = datasourceService.getDatasourceTables(id);
 			return ResponseEntity.ok(tables);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			return ResponseEntity.badRequest().build();
 		}
 	}
@@ -90,8 +87,7 @@ public class DatasourceController {
 		try {
 			Datasource created = datasourceService.createDatasource(datasource);
 			return ResponseEntity.ok(created);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			return ResponseEntity.badRequest().build();
 		}
 	}
@@ -105,8 +101,7 @@ public class DatasourceController {
 		try {
 			Datasource updated = datasourceService.updateDatasource(id, datasource);
 			return ResponseEntity.ok(updated);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			return ResponseEntity.badRequest().build();
 		}
 	}
@@ -119,8 +114,7 @@ public class DatasourceController {
 		try {
 			datasourceService.deleteDatasource(id);
 			return ResponseEntity.ok(ApiResponse.success("数据源删除成功"));
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(ApiResponse.error("删除失败：" + e.getMessage()));
 		}
 	}
@@ -134,9 +128,93 @@ public class DatasourceController {
 			boolean success = datasourceService.testConnection(id);
 			ApiResponse response = success ? ApiResponse.success("连接测试成功") : ApiResponse.error("连接测试失败");
 			return ResponseEntity.ok(response);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			return ResponseEntity.badRequest().body(ApiResponse.error("测试失败：" + e.getMessage()));
+		}
+	}
+
+	// ==================== 逻辑外键管理 API ====================
+
+	/**
+	 * 获取数据源表的字段列表
+	 */
+	@GetMapping("/{id}/tables/{tableName}/columns")
+	public ResponseEntity<List<String>> getTableColumns(@PathVariable(value = "id") Integer id,
+			@PathVariable(value = "tableName") String tableName) {
+		try {
+			List<String> columns = datasourceService.getTableColumns(id, tableName);
+			return ResponseEntity.ok(columns);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().build();
+		}
+	}
+
+	/**
+	 * 获取数据源的逻辑外键列表
+	 */
+	@GetMapping("/{id}/logical-relations")
+	public ResponseEntity<List<LogicalRelation>> getLogicalRelations(@PathVariable(value = "id") Integer id) {
+		try {
+			List<LogicalRelation> logicalRelations = datasourceService.getLogicalRelations(id);
+			return ResponseEntity.ok(logicalRelations);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().build();
+		}
+	}
+
+	/**
+	 * 添加逻辑外键
+	 */
+	@PostMapping("/{id}/logical-relations")
+	public ResponseEntity<LogicalRelation> addLogicalRelation(@PathVariable(value = "id") Integer id,
+			@RequestBody LogicalRelation logicalRelation) {
+		try {
+			LogicalRelation created = datasourceService.addLogicalRelation(id, logicalRelation);
+			return ResponseEntity.ok(created);
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().build();
+		}
+	}
+
+	/**
+	 * 更新逻辑外键
+	 */
+	@PutMapping("/{id}/logical-relations/{relationId}")
+	public ResponseEntity<ApiResponse> updateLogicalRelation(@PathVariable(value = "id") Integer id,
+			@PathVariable(value = "relationId") Integer relationId, @RequestBody LogicalRelation logicalRelation) {
+		try {
+			LogicalRelation updated = datasourceService.updateLogicalRelation(id, relationId, logicalRelation);
+			return ResponseEntity.ok(ApiResponse.success("逻辑外键更新成功", updated));
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(ApiResponse.error("更新失败：" + e.getMessage()));
+		}
+	}
+
+	/**
+	 * 删除逻辑外键
+	 */
+	@DeleteMapping("/{id}/logical-relations/{relationId}")
+	public ResponseEntity<ApiResponse> deleteLogicalRelation(@PathVariable(value = "id") Integer id,
+			@PathVariable(value = "relationId") Integer relationId) {
+		try {
+			datasourceService.deleteLogicalRelation(id, relationId);
+			return ResponseEntity.ok(ApiResponse.success("逻辑外键删除成功"));
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(ApiResponse.error("删除失败：" + e.getMessage()));
+		}
+	}
+
+	/**
+	 * 批量保存逻辑外键（替换现有的所有外键）
+	 */
+	@PutMapping("/{id}/logical-relations")
+	public ResponseEntity<ApiResponse> saveLogicalRelations(@PathVariable(value = "id") Integer id,
+			@RequestBody List<LogicalRelation> logicalRelations) {
+		try {
+			List<LogicalRelation> saved = datasourceService.saveLogicalRelations(id, logicalRelations);
+			return ResponseEntity.ok(ApiResponse.success("逻辑外键保存成功", saved));
+		} catch (Exception e) {
+			return ResponseEntity.badRequest().body(ApiResponse.error("保存失败：" + e.getMessage()));
 		}
 	}
 

@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 @Slf4j
+@SuppressWarnings("unchecked")
 public abstract class AbstractHybridRetrievalStrategy implements HybridRetrievalStrategy {
 
 	protected final ExecutorService executorService;
