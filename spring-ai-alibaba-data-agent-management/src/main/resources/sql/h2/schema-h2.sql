@@ -222,3 +222,46 @@ CREATE TABLE IF NOT EXISTS agent_datasource_tables (
     INDEX idx_table_name (table_name),
     FOREIGN KEY (agent_datasource_id) REFERENCES agent_datasource(id) ON DELETE CASCADE ON UPDATE CASCADE
     ) ENGINE = InnoDB COMMENT = '某个智能体某个数据源所选中的数据表';
+
+-- 数据导入任务表
+CREATE TABLE IF NOT EXISTS data_import_task (
+  id VARCHAR(36) PRIMARY KEY COMMENT '任务ID（UUID）',
+  agent_id INT NOT NULL COMMENT '智能体ID',
+  file_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+  file_path VARCHAR(500) NOT NULL COMMENT '文件存储路径',
+  file_size BIGINT NOT NULL COMMENT '文件大小（字节）',
+  file_type VARCHAR(50) NOT NULL COMMENT '文件类型：xlsx, xls, csv',
+  target_table_name VARCHAR(255) COMMENT '目标表名',
+  status VARCHAR(50) DEFAULT 'pending' COMMENT '状态：pending, processing, completed, failed',
+  total_rows INT DEFAULT 0 COMMENT '总行数',
+  processed_rows INT DEFAULT 0 COMMENT '已处理行数',
+  error_message TEXT COMMENT '错误信息',
+  start_time TIMESTAMP COMMENT '开始时间',
+  end_time TIMESTAMP COMMENT '结束时间',
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_agent_id_dit (agent_id),
+  INDEX idx_status_dit (status),
+  INDEX idx_create_time_dit (create_time),
+  FOREIGN KEY (agent_id) REFERENCES agent(id) ON DELETE CASCADE
+) ENGINE = InnoDB COMMENT = '数据导入任务表';
+
+-- 数据导入元数据表
+CREATE TABLE IF NOT EXISTS data_import_metadata (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id VARCHAR(36) NOT NULL COMMENT '关联的任务ID',
+  table_name VARCHAR(255) NOT NULL COMMENT '物理表名（唯一，用于CREATE TABLE）',
+  logical_table_name VARCHAR(255) COMMENT '逻辑表名（显示名称，来自文件名）',
+  column_count INT NOT NULL COMMENT '列数',
+  row_count INT NOT NULL COMMENT '行数',
+  datasource_type VARCHAR(50) NOT NULL COMMENT '数据库类型：mysql, postgresql, h2',
+  datasource_id INT COMMENT '关联的虚拟数据源ID',
+  table_description VARCHAR(500) COMMENT '表的业务描述',
+  column_descriptions TEXT COMMENT '列描述JSON: {"column1": "描述1", "column2": "描述2"}',
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX idx_task_id_dim (task_id),
+  INDEX idx_table_name_dim (table_name),
+  INDEX idx_logical_table_name (logical_table_name),
+  INDEX idx_datasource_id_dim (datasource_id),
+  FOREIGN KEY (task_id) REFERENCES data_import_task(id) ON DELETE CASCADE,
+  FOREIGN KEY (datasource_id) REFERENCES datasource(id) ON DELETE CASCADE
+) ENGINE = InnoDB COMMENT = '数据导入元数据表';

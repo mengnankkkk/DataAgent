@@ -355,6 +355,78 @@
           <el-button type="primary" @click="createNewDatasource">创建并添加</el-button>
         </div>
       </el-tab-pane>
+      <el-tab-pane label="Excel/CSV导入" name="import">
+        <div style="padding: 20px">
+          <el-alert
+            title="Excel/CSV数据导入"
+            type="info"
+            description="上传Excel或CSV文件，系统将自动创建数据表并导入数据"
+            :closable="false"
+            style="margin-bottom: 20px"
+          />
+
+          <div class="form-item">
+            <label>选择文件 *</label>
+            <el-upload
+              ref="uploadRef"
+              :auto-upload="false"
+              :limit="1"
+              :on-change="handleFileChange"
+              :on-remove="handleFileRemove"
+              accept=".xlsx,.xls,.csv"
+              drag
+            >
+              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+              <div class="el-upload__text">拖拽文件到此处或 <em>点击上传</em></div>
+              <template #tip>
+                <div class="el-upload__tip">支持 .xlsx, .xls, .csv 格式，文件大小不超过 100MB</div>
+              </template>
+            </el-upload>
+          </div>
+
+          <div v-if="importFile" style="margin-top: 20px">
+            <el-descriptions title="文件信息" :column="2" border>
+              <el-descriptions-item label="文件名">{{ importFile.name }}</el-descriptions-item>
+              <el-descriptions-item label="文件大小">{{
+                formatFileSize(importFile.size)
+              }}</el-descriptions-item>
+              <el-descriptions-item label="文件类型">{{ importFile.type || '未知' }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+
+          <div v-if="importStatus.importing" style="margin-top: 20px">
+            <el-card>
+              <template #header>
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <span>导入进度</span>
+                  <el-tag :type="getStatusType(importStatus.status)">{{ importStatus.status }}</el-tag>
+                </div>
+              </template>
+              <el-progress
+                :percentage="importStatus.progress"
+                :status="importStatus.status === 'failed' ? 'exception' : undefined"
+              />
+              <div style="margin-top: 10px; color: #666">{{ importStatus.message }}</div>
+              <div v-if="importStatus.errorMessage" style="margin-top: 10px; color: #f56c6c">
+                错误: {{ importStatus.errorMessage }}
+              </div>
+            </el-card>
+          </div>
+
+          <el-divider />
+          <div style="text-align: right">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button
+              type="primary"
+              @click="startImport"
+              :loading="importStatus.importing"
+              :disabled="!importFile || importStatus.importing"
+            >
+              {{ importStatus.importing ? '导入中...' : '开始导入' }}
+            </el-button>
+          </div>
+        </div>
+      </el-tab-pane>
     </el-tabs>
   </el-dialog>
   <el-dialog v-model="editDialogVisible" title="编辑数据源" width="1000">
@@ -483,6 +555,8 @@
   import { ApiResponse } from '@/services/common';
   import { ElMessage, ElMessageBox } from 'element-plus';
   import agentDatasourceService from '@/services/agentDatasource';
+  import dataImportService from '@/services/dataImport';
+  import type { UploadFile } from 'element-plus';
 
   export default defineComponent({
     name: 'AgentDataSourceConfig',
@@ -911,6 +985,147 @@
         }
       };
 
+      // Excel/CSV导入相关状态
+      const importFile: Ref<File | null> = ref(null);
+      const importStatus = ref({
+        importing: false,
+        progress: 0,
+        status: '',
+        message: '',
+        errorMessage: '',
+      });
+
+      // 文件选择处理
+      const handleFileChange = (uploadFile: UploadFile) => {
+        if (uploadFile.raw) {
+          importFile.value = uploadFile.raw;
+          // 重置状态
+          importStatus.value = {
+            importing: false,
+            progress: 0,
+            status: '',
+            message: '',
+            errorMessage: '',
+          };
+        }
+      };
+
+      // 文件移除处理
+      const handleFileRemove = () => {
+        importFile.value = null;
+        importStatus.value = {
+          importing: false,
+          progress: 0,
+          status: '',
+          message: '',
+          errorMessage: '',
+        };
+      };
+
+      // 格式化文件大小
+      const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+      };
+
+      // 获取状态类型
+      const getStatusType = (status: string): string => {
+        const statusMap: Record<string, string> = {
+          'parsing': 'info',
+          'creating_table': 'warning',
+          'inserting': 'primary',
+          'completed': 'success',
+          'failed': 'danger',
+        };
+        return statusMap[status] || 'info';
+      };
+
+      // 开始导入
+      const startImport = async () => {
+        if (!importFile.value) {
+          ElMessage.warning('请先选择文件');
+          return;
+        }
+
+        try {
+          importStatus.value.importing = true;
+          importStatus.value.progress = 5;
+          importStatus.value.status = 'uploading';
+          importStatus.value.message = '正在上传文件...';
+
+          // 上传文件
+          const response = await dataImportService.uploadFile(props.agentId, importFile.value);
+
+          if (response.success) {
+            importStatus.value.progress = 20;
+            importStatus.value.status = 'processing';
+            importStatus.value.message = '文件上传成功，正在处理...';
+
+            const taskId = response.taskId;
+
+            // 轮询任务状态
+            const pollInterval = setInterval(async () => {
+              try {
+                const taskStatus = await dataImportService.getTaskStatus(taskId);
+
+                importStatus.value.progress = taskStatus.progress || 0;
+                importStatus.value.status = taskStatus.status;
+
+                if (taskStatus.status === 'completed') {
+                  clearInterval(pollInterval);
+                  importStatus.value.progress = 100;
+                  importStatus.value.message = `导入完成！共导入 ${taskStatus.totalRows} 行数据，表名: ${taskStatus.tableName}`;
+                  ElMessage.success('数据导入成功！');
+
+                  // 3秒后刷新数据源列表并关闭对话框
+                  setTimeout(() => {
+                    loadAgentDatasource();
+                    dialogVisible.value = false;
+                    importFile.value = null;
+                    importStatus.value = {
+                      importing: false,
+                      progress: 0,
+                      status: '',
+                      message: '',
+                      errorMessage: '',
+                    };
+                  }, 3000);
+                } else if (taskStatus.status === 'failed') {
+                  clearInterval(pollInterval);
+                  importStatus.value.errorMessage = taskStatus.errorMessage || '导入失败';
+                  importStatus.value.message = '导入失败';
+                  ElMessage.error('数据导入失败: ' + taskStatus.errorMessage);
+                  importStatus.value.importing = false;
+                } else {
+                  // 更新进度消息
+                  if (taskStatus.processedRows && taskStatus.totalRows) {
+                    importStatus.value.message = `正在导入数据: ${taskStatus.processedRows}/${taskStatus.totalRows}`;
+                  }
+                }
+              } catch (error) {
+                clearInterval(pollInterval);
+                importStatus.value.status = 'failed';
+                importStatus.value.errorMessage = '查询任务状态失败';
+                importStatus.value.importing = false;
+                ElMessage.error('查询任务状态失败');
+              }
+            }, 2000); // 每2秒轮询一次
+          } else {
+            throw new Error(response.message || '上传失败');
+          }
+        } catch (error) {
+          console.error('导入失败:', error);
+          importStatus.value.status = 'failed';
+          importStatus.value.errorMessage = error instanceof Error ? error.message : '未知错误';
+          importStatus.value.message = '导入失败';
+          importStatus.value.importing = false;
+          ElMessage.error('导入失败: ' + (error instanceof Error ? error.message : '未知错误'));
+        }
+      };
+
       onMounted(() => {
         loadAgentDatasource();
       });
@@ -951,6 +1166,14 @@
         clearAllTables,
         truncateText,
         handleExpandChange,
+        // Excel/CSV导入相关
+        importFile,
+        importStatus,
+        handleFileChange,
+        handleFileRemove,
+        formatFileSize,
+        getStatusType,
+        startImport,
       };
     },
   });
