@@ -65,6 +65,8 @@
     <dameng.version>8.1.3.140</dameng.version>
     <testcontainers.version>1.21.4</testcontainers.version>
     <elasticsearch-client.version>8.18.0</elasticsearch-client.version>
+    <trino-jdbc.version>435</trino-jdbc.version>
+    <hive-jdbc.version>3.1.3</hive-jdbc.version>
   </properties>
 
   <dependencyManagement>
@@ -226,6 +228,30 @@
         <groupId>org.elasticsearch.client</groupId>
         <artifactId>elasticsearch-rest-client</artifactId>
         <version>${elasticsearch-client.version}</version>
+      </dependency>
+
+      <!-- Trino JDBC Driver -->
+      <dependency>
+        <groupId>io.trino</groupId>
+        <artifactId>trino-jdbc</artifactId>
+        <version>${trino-jdbc.version}</version>
+      </dependency>
+
+      <!-- Hive JDBC Driver -->
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-jdbc</artifactId>
+        <version>${hive-jdbc.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.eclipse.jetty.aggregate</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
 

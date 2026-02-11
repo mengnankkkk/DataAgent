@@ -55,7 +55,11 @@ public enum BizDataSourceTypeEnum {
 	MYSQL_VIRTUAL(51, "mysql-virtual", DatabaseDialectEnum.MYSQL.getCode(), DbAccessTypeEnum.MEMORY.getCode()),
 
 	POSTGRESQL_VIRTUAL(52, "postgresql-virtual", DatabaseDialectEnum.POSTGRESQL.getCode(),
-			DbAccessTypeEnum.MEMORY.getCode());
+			DbAccessTypeEnum.MEMORY.getCode()),
+
+	HIVE(61, "hive", DatabaseDialectEnum.HIVE.getCode(), DbAccessTypeEnum.JDBC.getCode()),
+
+	TRINO(62, "trino", DatabaseDialectEnum.TRINO.getCode(), DbAccessTypeEnum.JDBC.getCode());
 
 	public final Integer code;
 

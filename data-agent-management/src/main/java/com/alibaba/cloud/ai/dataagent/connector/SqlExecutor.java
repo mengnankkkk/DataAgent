@@ -67,6 +67,16 @@ public class SqlExecutor {
 					statement.execute("ALTER SESSION SET CURRENT_SCHEMA = " + schema);
 				}
 			}
+			else if (dialect.equals(DatabaseDialectEnum.TRINO.code)) {
+				if (StringUtils.isNotEmpty(schema)) {
+					statement.execute("USE hive." + schema);
+				}
+			}
+			else if (dialect.equals(DatabaseDialectEnum.HIVE.code)) {
+				if (StringUtils.isNotEmpty(schema)) {
+					statement.execute("USE " + schema);
+				}
+			}
 
 			try (ResultSet rs = statement.executeQuery(sql)) {
 				return ResultSetBuilder.buildFrom(rs, schema);
@@ -120,6 +130,16 @@ public class SqlExecutor {
 			else if (dialect.equals(DatabaseDialectEnum.ORACLE.code)) {
 				if (StringUtils.isNotEmpty(databaseOrSchema)) {
 					statement.execute("ALTER SESSION SET CURRENT_SCHEMA = " + databaseOrSchema);
+				}
+			}
+			else if (dialect.equals(DatabaseDialectEnum.TRINO.code)) {
+				if (StringUtils.isNotEmpty(databaseOrSchema)) {
+					statement.execute("USE hive." + databaseOrSchema);
+				}
+			}
+			else if (dialect.equals(DatabaseDialectEnum.HIVE.code)) {
+				if (StringUtils.isNotEmpty(databaseOrSchema)) {
+					statement.execute("USE " + databaseOrSchema);
 				}
 			}
 
