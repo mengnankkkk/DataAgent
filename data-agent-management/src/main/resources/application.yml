@@ -54,6 +54,14 @@ spring:
             custom-domain: ${OSS_CUSTOM_DOMAIN:}
         skills:
           local-path: ./agent-skills
+        context-refiner:
+          enabled: ${DATA_AGENT_CONTEXT_REFINER_ENABLED:true}
+          endpoint: ${DATA_AGENT_CONTEXT_REFINER_ENDPOINT:http://127.0.0.1:18080/api/refine}
+          budget: ${DATA_AGENT_CONTEXT_REFINER_BUDGET:200}
+          history-limit: ${DATA_AGENT_CONTEXT_REFINER_HISTORY_LIMIT:20}
+          fail-open: ${DATA_AGENT_CONTEXT_REFINER_FAIL_OPEN:true}
+          timeout-seconds: ${DATA_AGENT_CONTEXT_REFINER_TIMEOUT_SECONDS:30}
+          apply-mode: ${DATA_AGENT_CONTEXT_REFINER_APPLY_MODE:USER_PROMPT}
         max-sql-retry-count: 10
         # Langfuse 可观测性配置
         langfuse:

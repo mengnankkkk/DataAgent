@@ -33,6 +33,8 @@ import com.alibaba.cloud.ai.dataagent.entity.Agent;
 import com.alibaba.cloud.ai.dataagent.service.agent.AgentService;
 import com.alibaba.cloud.ai.dataagent.service.aimodelconfig.DynamicModelFactory;
 import com.alibaba.cloud.ai.dataagent.service.aimodelconfig.ModelConfigDataService;
+import com.alibaba.cloud.ai.dataagent.service.contextrefiner.ContextRefinerResult;
+import com.alibaba.cloud.ai.dataagent.service.contextrefiner.ContextRefinerService;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.model.Model;
 import java.time.Duration;
@@ -79,6 +81,8 @@ public class AiAgentRuntimeServiceImpl implements GraphService {
 	private final AgentRuntimeExtensionFactory agentRuntimeExtensionFactory;
 
 	private final AgentService agentService;
+
+	private final ContextRefinerService contextRefinerService;
 
 	@Override
 	public String nl2sql(String naturalQuery, String agentId) {
@@ -195,12 +199,14 @@ public class AiAgentRuntimeServiceImpl implements GraphService {
 			Model model = agentScopeModelFactory.create(dynamicModelFactory.createChatModel(modelConfig),
 					modelConfig.getModelName(), request.getAgentId());
 			ManagedAgent managedAgent = managedAgentRegistry.getRequired();
-			AgentRuntimeExtensions runtimeExtensions = agentRuntimeExtensionFactory.create(request, eventPublisher);
+			String resolvedSystemPrompt = resolveManagedSystemPrompt(managedAgentConfig, request.getAgentId());
+			ContextRefinerResult promptContext = contextRefinerService.prepareRuntimePrompt(request, resolvedSystemPrompt);
+			AgentRuntimeExtensions runtimeExtensions = agentRuntimeExtensionFactory.create(request, eventPublisher,
+					promptContext.enableMemory());
 			Msg response;
 			try {
 				response = managedAgent.run(new AgentRunContext(request.getAgentId(), request.getThreadId(), model,
-						resolveManagedSystemPrompt(managedAgentConfig, request.getAgentId()), buildUserPrompt(request),
-						AGENT_CALL_TIMEOUT, runtimeExtensions));
+						promptContext.systemPrompt(), promptContext.userPrompt(), AGENT_CALL_TIMEOUT, runtimeExtensions));
 			}
 			catch (RuntimeException ex) {
 				if (sessionRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())

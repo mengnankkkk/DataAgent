@@ -42,9 +42,14 @@ public class AgentRuntimeExtensionFactory {
 	private final AgentScopeSkillBoxFactory skillBoxFactory;
 
 	public AgentRuntimeExtensions create(GraphRequest request, @Nullable AgentRuntimeEventPublisher eventPublisher) {
+		return create(request, eventPublisher, true);
+	}
+
+	public AgentRuntimeExtensions create(GraphRequest request, @Nullable AgentRuntimeEventPublisher eventPublisher,
+			boolean enableMemory) {
 		Toolkit toolkit = toolkitFactory.create(request.getAgentId());
 		SkillBox skillBox = skillBoxFactory.create(request.getAgentId(), toolkit);
-		Memory memory = memoryFactory.create(request.getThreadId());
+		Memory memory = enableMemory ? memoryFactory.create(request.getThreadId()) : null;
 		AgentRuntimeRequestMetadata requestMetadata = new AgentRuntimeRequestMetadata(request.getAgentId(),
 				request.getThreadId(), request.isNl2sqlOnly());
 		ToolExecutionContext toolExecutionContext = ToolExecutionContext.builder()

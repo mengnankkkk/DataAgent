@@ -40,6 +40,8 @@ public class DataAgentProperties {
 
 	private ReportTemplate reportTemplate = new ReportTemplate();
 
+	private ContextRefiner contextRefiner = new ContextRefiner();
+
 	/**
 	 * sql执行失败重试次数
 	 */
@@ -89,6 +91,61 @@ public class DataAgentProperties {
 
 		// ECharts (图表库) 南方科技大学开源软件镜像站
 		private String echartsUrl = "https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/echarts/5.5.0/echarts.min.js";
+
+	}
+
+	@Getter
+	@Setter
+	public static class ContextRefiner {
+
+		/**
+		 * 是否启用外部上下文清洗接口。
+		 */
+		private boolean enabled = true;
+
+		/**
+		 * refine HTTP 接口完整地址，例如 http://127.0.0.1:18080/api/refine 。
+		 */
+		private String endpoint = "http://127.0.0.1:18080/api/refine";
+
+		/**
+		 * 默认预算，未配置时与 refine 服务保持一致。
+		 */
+		private Integer budget = 200;
+
+		/**
+		 * 发送给 refine 的历史消息条数上限。
+		 */
+		private int historyLimit = 20;
+
+		/**
+		 * refine 失败时是否自动降级为原始 prompt。
+		 */
+		private boolean failOpen = true;
+
+		/**
+		 * refine 接口超时时间，单位秒。
+		 */
+		private int timeoutSeconds = 30;
+
+		/**
+		 * 清洗结果应用方式。
+		 */
+		private ApplyMode applyMode = ApplyMode.USER_PROMPT;
+
+		public enum ApplyMode {
+
+			/**
+			 * 仅替换 user prompt，保留原 system prompt 与 memory。
+			 */
+			USER_PROMPT,
+
+			/**
+			 * 将 refine 结果视为最终主 prompt，清空原 system prompt，并关闭 memory 注入。
+			 */
+			FULL_PROMPT
+
+		}
 
 	}
 
