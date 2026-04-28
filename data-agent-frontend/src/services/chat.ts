@@ -208,7 +208,11 @@ class ChatService {
    * @param sessionId 会话ID
    * @param message 消息对象
    */
-  async saveMessage(sessionId: string, agentId: number, message: ChatMessage): Promise<ChatMessage> {
+  async saveMessage(
+    sessionId: string,
+    agentId: number,
+    message: ChatMessage,
+  ): Promise<ChatMessage> {
     try {
       const resolvedAgentId = resolveAgentId(agentId);
       // 设置会话ID
@@ -319,7 +323,8 @@ class ChatService {
       const response = await axios.post(
         `${API_BASE_URL}/sessions/${sessionId}/reports/html`,
         content,
-        { params: { agentId: resolvedAgentId },
+        {
+          params: { agentId: resolvedAgentId },
           responseType: 'blob', // 重要：设置响应类型为blob
           headers: {
             'Content-Type': 'text/plain;charset=utf-8', // 明确设置内容类型和编码

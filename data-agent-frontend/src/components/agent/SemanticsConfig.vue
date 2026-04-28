@@ -166,7 +166,10 @@
       </el-form-item>
 
       <el-form-item label="数据类型" prop="dataType" required>
-        <el-input v-model="modelForm.dataType" placeholder="请输入数据类型，例如 int、varchar(20)" />
+        <el-input
+          v-model="modelForm.dataType"
+          placeholder="请输入数据类型，例如 int、varchar(20)"
+        />
       </el-form-item>
     </el-form>
 
@@ -194,402 +197,400 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, ref, type Ref } from 'vue';
-import { Delete, Plus, Search, UploadFilled } from '@element-plus/icons-vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import BatchImportDialog from './BatchImportDialog.vue';
-import agentDatasourceService from '@/services/agentDatasource';
-import semanticModelService, {
-  type SemanticModel,
-  type SemanticModelAddDto,
-  type SemanticModelImportItem,
-  type SemanticModelUpdateDto,
-} from '@/services/semanticModel';
+  import { defineComponent, onMounted, ref, type Ref } from 'vue';
+  import { Delete, Plus, Search, UploadFilled } from '@element-plus/icons-vue';
+  import { ElMessage, ElMessageBox } from 'element-plus';
+  import BatchImportDialog from './BatchImportDialog.vue';
+  import agentDatasourceService from '@/services/agentDatasource';
+  import semanticModelService, {
+    type SemanticModel,
+    type SemanticModelAddDto,
+    type SemanticModelImportItem,
+    type SemanticModelUpdateDto,
+  } from '@/services/semanticModel';
 
-type SemanticModelView = SemanticModel & {
-  createTime?: string;
-};
+  type SemanticModelView = SemanticModel & {
+    createTime?: string;
+  };
 
-const createEmptyModel = (agentId: number): SemanticModel => ({
-  tableName: '',
-  columnName: '',
-  businessName: '',
-  synonyms: '',
-  businessDescription: '',
-  columnComment: '',
-  dataType: '',
-  status: 1,
-  agentId,
-});
+  const createEmptyModel = (agentId: number): SemanticModel => ({
+    tableName: '',
+    columnName: '',
+    businessName: '',
+    synonyms: '',
+    businessDescription: '',
+    columnComment: '',
+    dataType: '',
+    status: 1,
+    agentId,
+  });
 
-export default defineComponent({
-  name: 'AgentSemanticsConfig',
-  components: {
-    BatchImportDialog,
-    UploadFilled,
-    Search,
-  },
-  props: {
-    agentId: {
-      type: Number,
-      required: true,
+  export default defineComponent({
+    name: 'AgentSemanticsConfig',
+    components: {
+      BatchImportDialog,
+      UploadFilled,
+      Search,
     },
-  },
-  setup(props) {
-    const semanticModelList: Ref<SemanticModel[]> = ref([]);
-    const dialogVisible = ref(false);
-    const batchImportDialogVisible = ref(false);
-    const isEdit = ref(false);
-    const searchKeyword = ref('');
-    const selectedModels: Ref<SemanticModel[]> = ref([]);
-    const currentEditId = ref<number | null>(null);
-    const modelForm: Ref<SemanticModel> = ref(createEmptyModel(props.agentId));
-
-    const jsonTemplate = [
-      {
-        tableName: 'work_order',
-        columnName: 'order_type',
-        businessName: '工单类型',
-        synonyms: '类型,工单种类',
-        businessDesc: '用于区分工单种类，例如 1=资产工单, 2=账号工单',
-        dataType: 'int',
+    props: {
+      agentId: {
+        type: Number,
+        required: true,
       },
-      {
-        tableName: 'work_order',
-        columnName: 'status',
-        businessName: '工单状态',
-        synonyms: '状态,处理状态',
-        businessDesc: '工单当前处理状态，例如 0=待处理, 1=处理中, 2=已完成, 3=已关闭',
-        dataType: 'int',
-      },
-    ];
+    },
+    setup(props) {
+      const semanticModelList: Ref<SemanticModel[]> = ref([]);
+      const dialogVisible = ref(false);
+      const batchImportDialogVisible = ref(false);
+      const isEdit = ref(false);
+      const searchKeyword = ref('');
+      const selectedModels: Ref<SemanticModel[]> = ref([]);
+      const currentEditId = ref<number | null>(null);
+      const modelForm: Ref<SemanticModel> = ref(createEmptyModel(props.agentId));
 
-    const getErrorMessage = (error: unknown, fallback: string): string => {
-      if (error instanceof Error && error.message.trim()) {
-        return error.message;
-      }
-      return fallback;
-    };
+      const jsonTemplate = [
+        {
+          tableName: 'work_order',
+          columnName: 'order_type',
+          businessName: '工单类型',
+          synonyms: '类型,工单种类',
+          businessDesc: '用于区分工单种类，例如 1=资产工单, 2=账号工单',
+          dataType: 'int',
+        },
+        {
+          tableName: 'work_order',
+          columnName: 'status',
+          businessName: '工单状态',
+          synonyms: '状态,处理状态',
+          businessDesc: '工单当前处理状态，例如 0=待处理, 1=处理中, 2=已完成, 3=已关闭',
+          dataType: 'int',
+        },
+      ];
 
-    const getActiveDatasourceId = async (): Promise<number> => {
-      const activeAgentDatasource = await agentDatasourceService.getActiveAgentDatasource(props.agentId);
-      if (!activeAgentDatasource.datasourceId) {
-        throw new Error('当前未找到启用的数据源');
-      }
-      return activeAgentDatasource.datasourceId;
-    };
+      const getErrorMessage = (error: unknown, fallback: string): string => {
+        if (error instanceof Error && error.message.trim()) {
+          return error.message;
+        }
+        return fallback;
+      };
 
-    const loadSemanticModels = async () => {
-      try {
-        semanticModelList.value = await semanticModelService.list(
+      const getActiveDatasourceId = async (): Promise<number> => {
+        const activeAgentDatasource = await agentDatasourceService.getActiveAgentDatasource(
           props.agentId,
-          searchKeyword.value || undefined,
         );
-      } catch (error) {
-        ElMessage.error(getErrorMessage(error, '加载语义模型列表失败'));
-        console.error('Failed to load semantic models:', error);
-      }
-    };
+        if (!activeAgentDatasource.datasourceId) {
+          throw new Error('当前未找到启用的数据源');
+        }
+        return activeAgentDatasource.datasourceId;
+      };
 
-    const handleSearch = () => {
-      loadSemanticModels();
-    };
+      const loadSemanticModels = async () => {
+        try {
+          semanticModelList.value = await semanticModelService.list(
+            props.agentId,
+            searchKeyword.value || undefined,
+          );
+        } catch (error) {
+          ElMessage.error(getErrorMessage(error, '加载语义模型列表失败'));
+          console.error('Failed to load semantic models:', error);
+        }
+      };
 
-    const openCreateDialog = () => {
-      isEdit.value = false;
-      currentEditId.value = null;
-      modelForm.value = createEmptyModel(props.agentId);
-      dialogVisible.value = true;
-    };
+      const handleSearch = () => {
+        loadSemanticModels();
+      };
 
-    const openBatchImportDialog = () => {
-      batchImportDialogVisible.value = true;
-    };
+      const openCreateDialog = () => {
+        isEdit.value = false;
+        currentEditId.value = null;
+        modelForm.value = createEmptyModel(props.agentId);
+        dialogVisible.value = true;
+      };
 
-    const handleSelectionChange = (selection: SemanticModel[]) => {
-      selectedModels.value = selection;
-    };
+      const openBatchImportDialog = () => {
+        batchImportDialogVisible.value = true;
+      };
 
-    const editModel = (model: SemanticModel) => {
-      isEdit.value = true;
-      currentEditId.value = model.id || null;
-      modelForm.value = { ...model };
-      dialogVisible.value = true;
-    };
+      const handleSelectionChange = (selection: SemanticModel[]) => {
+        selectedModels.value = selection;
+      };
 
-    const deleteModel = async (model: SemanticModel) => {
-      if (!model.id) {
-        return;
-      }
+      const editModel = (model: SemanticModel) => {
+        isEdit.value = true;
+        currentEditId.value = model.id || null;
+        modelForm.value = { ...model };
+        dialogVisible.value = true;
+      };
 
-      try {
-        await ElMessageBox.confirm(
-          `确定要删除语义模型“${model.businessName}”吗？`,
-          '确认删除',
-          {
+      const deleteModel = async (model: SemanticModel) => {
+        if (!model.id) {
+          return;
+        }
+
+        try {
+          await ElMessageBox.confirm(`确定要删除语义模型“${model.businessName}”吗？`, '确认删除', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning',
-          },
-        );
+          });
 
-        const result = await semanticModelService.delete(model.id);
-        if (!result) {
-          ElMessage.error('删除失败');
-          return;
-        }
-
-        ElMessage.success('删除成功');
-        await loadSemanticModels();
-      } catch (error) {
-        if (error !== 'cancel') {
-          console.error('Failed to delete semantic model:', error);
-        }
-      }
-    };
-
-    const batchDeleteModels = async () => {
-      if (selectedModels.value.length === 0) {
-        ElMessage.warning('请先选择要删除的语义模型');
-        return;
-      }
-
-      try {
-        await ElMessageBox.confirm(
-          `确定要删除选中的 ${selectedModels.value.length} 个语义模型吗？`,
-          '确认批量删除',
-          {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning',
-          },
-        );
-
-        const ids = selectedModels.value
-          .map(model => model.id)
-          .filter((id): id is number => id !== undefined);
-        const result = await semanticModelService.batchDelete(ids);
-        if (!result) {
-          ElMessage.error('批量删除失败');
-          return;
-        }
-
-        ElMessage.success(`成功删除 ${ids.length} 个语义模型`);
-        selectedModels.value = [];
-        await loadSemanticModels();
-      } catch (error) {
-        if (error !== 'cancel') {
-          console.error('Failed to batch delete semantic models:', error);
-        }
-      }
-    };
-
-    const toggleStatus = async (model: SemanticModel, status: number) => {
-      if (!model.id) {
-        return;
-      }
-
-      try {
-        const ids = [model.id];
-        const result =
-          status === 1
-            ? await semanticModelService.enable(ids)
-            : await semanticModelService.disable(ids);
-
-        if (!result) {
-          ElMessage.error(`${status === 1 ? '启用' : '停用'}失败`);
-          return;
-        }
-
-        ElMessage.success(`${status === 1 ? '启用' : '停用'}成功`);
-        model.status = status;
-      } catch (error) {
-        ElMessage.error(getErrorMessage(error, `${status === 1 ? '启用' : '停用'}失败`));
-        console.error('Failed to toggle status:', error);
-      }
-    };
-
-    const saveModel = async () => {
-      try {
-        if (isEdit.value && currentEditId.value) {
-          const formData: SemanticModelUpdateDto = {
-            businessName: modelForm.value.businessName,
-            synonyms: modelForm.value.synonyms,
-            businessDescription: modelForm.value.businessDescription,
-            columnComment: modelForm.value.columnComment,
-            dataType: modelForm.value.dataType,
-          };
-          const result = await semanticModelService.update(currentEditId.value, formData);
+          const result = await semanticModelService.delete(model.id);
           if (!result) {
-            ElMessage.error('更新失败');
+            ElMessage.error('删除失败');
             return;
           }
-          ElMessage.success('更新成功');
-        } else {
-          const datasourceId = await getActiveDatasourceId();
-          const formData: SemanticModelAddDto = {
-            agentId: props.agentId,
-            datasourceId,
-            tableName: modelForm.value.tableName,
-            columnName: modelForm.value.columnName,
-            businessName: modelForm.value.businessName,
-            synonyms: modelForm.value.synonyms,
-            businessDescription: modelForm.value.businessDescription,
-            columnComment: modelForm.value.columnComment,
-            dataType: modelForm.value.dataType,
-          };
-          const result = await semanticModelService.create(formData);
+
+          ElMessage.success('删除成功');
+          await loadSemanticModels();
+        } catch (error) {
+          if (error !== 'cancel') {
+            console.error('Failed to delete semantic model:', error);
+          }
+        }
+      };
+
+      const batchDeleteModels = async () => {
+        if (selectedModels.value.length === 0) {
+          ElMessage.warning('请先选择要删除的语义模型');
+          return;
+        }
+
+        try {
+          await ElMessageBox.confirm(
+            `确定要删除选中的 ${selectedModels.value.length} 个语义模型吗？`,
+            '确认批量删除',
+            {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning',
+            },
+          );
+
+          const ids = selectedModels.value
+            .map(model => model.id)
+            .filter((id): id is number => id !== undefined);
+          const result = await semanticModelService.batchDelete(ids);
           if (!result) {
-            ElMessage.error('创建失败');
+            ElMessage.error('批量删除失败');
             return;
           }
-          ElMessage.success('创建成功');
+
+          ElMessage.success(`成功删除 ${ids.length} 个语义模型`);
+          selectedModels.value = [];
+          await loadSemanticModels();
+        } catch (error) {
+          if (error !== 'cancel') {
+            console.error('Failed to batch delete semantic models:', error);
+          }
+        }
+      };
+
+      const toggleStatus = async (model: SemanticModel, status: number) => {
+        if (!model.id) {
+          return;
         }
 
-        dialogVisible.value = false;
-        await loadSemanticModels();
-      } catch (error) {
-        ElMessage.error(getErrorMessage(error, isEdit.value ? '更新失败' : '创建失败'));
-        console.error('Failed to save model:', error);
-      }
-    };
+        try {
+          const ids = [model.id];
+          const result =
+            status === 1
+              ? await semanticModelService.enable(ids)
+              : await semanticModelService.disable(ids);
 
-    const validateJson = (jsonText: string) => {
-      try {
-        const data = JSON.parse(jsonText);
-        if (!Array.isArray(data)) {
-          ElMessage.error('JSON 格式错误：数据必须是数组');
-          return false;
-        }
-        if (data.length === 0) {
-          ElMessage.error('导入数据不能为空');
-          return false;
-        }
+          if (!result) {
+            ElMessage.error(`${status === 1 ? '启用' : '停用'}失败`);
+            return;
+          }
 
-        for (let i = 0; i < data.length; i++) {
-          const item = data[i];
-          if (!item.tableName || !item.columnName || !item.businessName || !item.dataType) {
-            ElMessage.error(
-              `第 ${i + 1} 条记录缺少必填字段（tableName、columnName、businessName、dataType）`,
-            );
+          ElMessage.success(`${status === 1 ? '启用' : '停用'}成功`);
+          model.status = status;
+        } catch (error) {
+          ElMessage.error(getErrorMessage(error, `${status === 1 ? '启用' : '停用'}失败`));
+          console.error('Failed to toggle status:', error);
+        }
+      };
+
+      const saveModel = async () => {
+        try {
+          if (isEdit.value && currentEditId.value) {
+            const formData: SemanticModelUpdateDto = {
+              businessName: modelForm.value.businessName,
+              synonyms: modelForm.value.synonyms,
+              businessDescription: modelForm.value.businessDescription,
+              columnComment: modelForm.value.columnComment,
+              dataType: modelForm.value.dataType,
+            };
+            const result = await semanticModelService.update(currentEditId.value, formData);
+            if (!result) {
+              ElMessage.error('更新失败');
+              return;
+            }
+            ElMessage.success('更新成功');
+          } else {
+            const datasourceId = await getActiveDatasourceId();
+            const formData: SemanticModelAddDto = {
+              agentId: props.agentId,
+              datasourceId,
+              tableName: modelForm.value.tableName,
+              columnName: modelForm.value.columnName,
+              businessName: modelForm.value.businessName,
+              synonyms: modelForm.value.synonyms,
+              businessDescription: modelForm.value.businessDescription,
+              columnComment: modelForm.value.columnComment,
+              dataType: modelForm.value.dataType,
+            };
+            const result = await semanticModelService.create(formData);
+            if (!result) {
+              ElMessage.error('创建失败');
+              return;
+            }
+            ElMessage.success('创建成功');
+          }
+
+          dialogVisible.value = false;
+          await loadSemanticModels();
+        } catch (error) {
+          ElMessage.error(getErrorMessage(error, isEdit.value ? '更新失败' : '创建失败'));
+          console.error('Failed to save model:', error);
+        }
+      };
+
+      const validateJson = (jsonText: string) => {
+        try {
+          const data = JSON.parse(jsonText);
+          if (!Array.isArray(data)) {
+            ElMessage.error('JSON 格式错误：数据必须是数组');
             return false;
           }
+          if (data.length === 0) {
+            ElMessage.error('导入数据不能为空');
+            return false;
+          }
+
+          for (let i = 0; i < data.length; i++) {
+            const item = data[i];
+            if (!item.tableName || !item.columnName || !item.businessName || !item.dataType) {
+              ElMessage.error(
+                `第 ${i + 1} 条记录缺少必填字段（tableName、columnName、businessName、dataType）`,
+              );
+              return false;
+            }
+          }
+
+          ElMessage.success('JSON 格式校验通过');
+          return true;
+        } catch (error) {
+          ElMessage.error(`JSON 格式错误：${(error as Error).message}`);
+          return false;
         }
+      };
 
-        ElMessage.success('JSON 格式校验通过');
+      const executeBatchImport = async (items: SemanticModelImportItem[]) => {
+        try {
+          const datasourceId = await getActiveDatasourceId();
+          return await semanticModelService.batchImport({
+            agentId: props.agentId,
+            datasourceId,
+            items,
+          });
+        } catch (error) {
+          ElMessage.error(`批量导入失败：${getErrorMessage(error, '导入失败')}`);
+          console.error('Failed to batch import:', error);
+          throw error;
+        }
+      };
+
+      const validateExcelFile = (file: File | null) => {
+        if (!file) {
+          ElMessage.error('请先选择 Excel 文件');
+          return false;
+        }
         return true;
-      } catch (error) {
-        ElMessage.error(`JSON 格式错误：${(error as Error).message}`);
-        return false;
-      }
-    };
+      };
 
-    const executeBatchImport = async (items: SemanticModelImportItem[]) => {
-      try {
-        const datasourceId = await getActiveDatasourceId();
-        return await semanticModelService.batchImport({
-          agentId: props.agentId,
-          datasourceId,
-          items,
-        });
-      } catch (error) {
-        ElMessage.error(`批量导入失败：${getErrorMessage(error, '导入失败')}`);
-        console.error('Failed to batch import:', error);
-        throw error;
-      }
-    };
+      const downloadExcelTemplate = async () => {
+        try {
+          await semanticModelService.downloadTemplate();
+          ElMessage.success('模板下载成功');
+        } catch (error) {
+          ElMessage.error(`模板下载失败：${getErrorMessage(error, '下载失败')}`);
+          console.error('Failed to download template:', error);
+        }
+      };
 
-    const validateExcelFile = (file: File | null) => {
-      if (!file) {
-        ElMessage.error('请先选择 Excel 文件');
-        return false;
-      }
-      return true;
-    };
+      const executeExcelImport = async (file: File) => {
+        try {
+          const datasourceId = await getActiveDatasourceId();
+          return await semanticModelService.importExcel(file, props.agentId, datasourceId);
+        } catch (error) {
+          ElMessage.error(`Excel 导入失败：${getErrorMessage(error, '导入失败')}`);
+          console.error('Failed to import excel:', error);
+          throw error;
+        }
+      };
 
-    const downloadExcelTemplate = async () => {
-      try {
-        await semanticModelService.downloadTemplate();
-        ElMessage.success('模板下载成功');
-      } catch (error) {
-        ElMessage.error(`模板下载失败：${getErrorMessage(error, '下载失败')}`);
-        console.error('Failed to download template:', error);
-      }
-    };
+      const handleBatchImported = async () => {
+        await loadSemanticModels();
+      };
 
-    const executeExcelImport = async (file: File) => {
-      try {
-        const datasourceId = await getActiveDatasourceId();
-        return await semanticModelService.importExcel(file, props.agentId, datasourceId);
-      } catch (error) {
-        ElMessage.error(`Excel 导入失败：${getErrorMessage(error, '导入失败')}`);
-        console.error('Failed to import excel:', error);
-        throw error;
-      }
-    };
+      const formatDateTime = (dateTime?: string) => {
+        if (!dateTime) {
+          return '-';
+        }
+        try {
+          const date = new Date(dateTime);
+          return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+          });
+        } catch {
+          return dateTime;
+        }
+      };
 
-    const handleBatchImported = async () => {
-      await loadSemanticModels();
-    };
+      const formatModelCreatedTime = (model: SemanticModelView) =>
+        formatDateTime(model.createdTime || model.createTime);
 
-    const formatDateTime = (dateTime?: string) => {
-      if (!dateTime) {
-        return '-';
-      }
-      try {
-        const date = new Date(dateTime);
-        return date.toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        });
-      } catch {
-        return dateTime;
-      }
-    };
+      onMounted(() => {
+        loadSemanticModels();
+      });
 
-    const formatModelCreatedTime = (model: SemanticModelView) =>
-      formatDateTime(model.createdTime || model.createTime);
-
-    onMounted(() => {
-      loadSemanticModels();
-    });
-
-    return {
-      Plus,
-      Search,
-      Delete,
-      semanticModelList,
-      dialogVisible,
-      batchImportDialogVisible,
-      isEdit,
-      searchKeyword,
-      selectedModels,
-      modelForm,
-      jsonTemplate,
-      openCreateDialog,
-      openBatchImportDialog,
-      handleSelectionChange,
-      batchDeleteModels,
-      handleSearch,
-      editModel,
-      deleteModel,
-      toggleStatus,
-      saveModel,
-      validateJson,
-      validateExcelFile,
-      executeBatchImport,
-      downloadExcelTemplate,
-      executeExcelImport,
-      handleBatchImported,
-      formatModelCreatedTime,
-    };
-  },
-});
+      return {
+        Plus,
+        Search,
+        Delete,
+        semanticModelList,
+        dialogVisible,
+        batchImportDialogVisible,
+        isEdit,
+        searchKeyword,
+        selectedModels,
+        modelForm,
+        jsonTemplate,
+        openCreateDialog,
+        openBatchImportDialog,
+        handleSelectionChange,
+        batchDeleteModels,
+        handleSearch,
+        editModel,
+        deleteModel,
+        toggleStatus,
+        saveModel,
+        validateJson,
+        validateExcelFile,
+        executeBatchImport,
+        downloadExcelTemplate,
+        executeExcelImport,
+        handleBatchImported,
+        formatModelCreatedTime,
+      };
+    },
+  });
 </script>
 
 <style scoped></style>

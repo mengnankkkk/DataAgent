@@ -254,7 +254,10 @@
               <span class="clarify-banner-risk">riskLevel={{ pendingClarify.riskLevel }}</span>
             </div>
             <div class="clarify-banner-body">
-              {{ pendingClarify.summary || '当前问题存在高歧义，下一条输入将作为补充信息或显式假设回填。' }}
+              {{
+                pendingClarify.summary ||
+                '当前问题存在高歧义，下一条输入将作为补充信息或显式假设回填。'
+              }}
             </div>
             <div v-if="pendingClarify.missingDimensions.length > 0" class="clarify-banner-tags">
               <el-tag
@@ -283,7 +286,9 @@
               </el-button>
             </div>
             <div class="clarify-banner-footer">
-              <span>下一条输入会作为人工反馈补充给上一个高歧义问题，填好后请点击发送按钮提交。</span>
+              <span>
+                下一条输入会作为人工反馈补充给上一个高歧义问题，填好后请点击发送按钮提交。
+              </span>
               <el-button link type="primary" @click="cancelPendingClarify">改为新问题</el-button>
             </div>
           </div>
@@ -997,7 +1002,9 @@
       };
 
       const getResolvedAgentId = (): number | null =>
-        parseAgentId(currentSession.value?.agentId) ?? parseAgentId(agent.value?.id) ?? getRouteAgentId();
+        parseAgentId(currentSession.value?.agentId) ??
+        parseAgentId(agent.value?.id) ??
+        getRouteAgentId();
 
       const requireResolvedAgentId = (): number => {
         const resolvedAgentId = getResolvedAgentId();
@@ -1156,8 +1163,7 @@
           }
           ElMessage.error('未知错误');
           console.error(error);
-        }
-        finally {
+        } finally {
           isSubmittingMessage.value = false;
         }
       };
@@ -1433,7 +1439,11 @@
                     messageType: 'html-report',
                   };
 
-                  await ChatService.saveMessage(sessionId, requireResolvedAgentId(), htmlReportMessage)
+                  await ChatService.saveMessage(
+                    sessionId,
+                    requireResolvedAgentId(),
+                    htmlReportMessage,
+                  )
                     .then(savedMessage => {
                       if (currentSession.value?.id === sessionId) {
                         currentMessages.value.push(savedMessage);
@@ -1458,7 +1468,11 @@
                     messageType: 'markdown-report',
                   };
 
-                  await ChatService.saveMessage(sessionId, requireResolvedAgentId(), markdownMessage)
+                  await ChatService.saveMessage(
+                    sessionId,
+                    requireResolvedAgentId(),
+                    markdownMessage,
+                  )
                     .then(savedMessage => {
                       if (currentSession.value?.id === sessionId) {
                         currentMessages.value.push(savedMessage);

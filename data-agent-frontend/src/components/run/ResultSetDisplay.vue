@@ -230,7 +230,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    //margin-left: 15px;
+    /* margin-left: 15px; */
     margin-bottom: 12px;
     padding: 8px 0;
     border-bottom: 1px solid #ebeef5;
