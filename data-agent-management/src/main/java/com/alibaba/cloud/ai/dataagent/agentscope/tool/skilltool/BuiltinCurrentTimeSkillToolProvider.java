@@ -101,10 +101,10 @@ public class BuiltinCurrentTimeSkillToolProvider implements SkillBoundToolProvid
 					.toString();
 			}
 			catch (IllegalArgumentException ex) {
-				throw new IllegalStateException("Invalid timezone or time format: " + ex.getMessage(), ex);
+				throw new IllegalStateException("时区或时间格式无效：" + ex.getMessage(), ex);
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("Failed to get current time: " + ex.getMessage(), ex);
+				throw new IllegalStateException("获取当前时间失败：" + ex.getMessage(), ex);
 			}
 		}
 

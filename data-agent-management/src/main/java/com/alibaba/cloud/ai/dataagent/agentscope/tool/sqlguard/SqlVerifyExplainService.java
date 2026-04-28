@@ -206,7 +206,7 @@ public class SqlVerifyExplainService {
 	public SqlGuardCheckResult inspectProfile(String agentId, SqlGuardCheckRequest request) {
 		String tableName = StringUtils.trimToEmpty(request == null ? null : request.getTableName());
 		if (StringUtils.isBlank(tableName)) {
-			throw new IllegalArgumentException("sql_guard.check with action=DATA_PROFILE requires tableName");
+			throw new IllegalArgumentException("sql_guard.check 在 action=DATA_PROFILE 时必须提供 tableName");
 		}
 		ProfileContext context = resolveProfileContext(agentId);
 		String actualTableName = resolveVisibleTableName(context, tableName);
@@ -214,7 +214,7 @@ public class SqlVerifyExplainService {
 		List<ColumnInfoBO> visibleColumns = applyVisibleColumnRestrictions(context, actualTableName, availableColumns);
 		if (visibleColumns.isEmpty()) {
 			throw new IllegalArgumentException(
-					"Table '%s' has no visible columns for current agent".formatted(actualTableName));
+					"表 '%s' 在当前 Agent 下没有可见字段".formatted(actualTableName));
 		}
 		List<ColumnInfoBO> columnsToInspect = resolveColumnsToInspect(request, actualTableName, visibleColumns);
 		int sampleLimit = normalizeProfileLimit(request == null ? null : request.getLimit());
@@ -223,7 +223,7 @@ public class SqlVerifyExplainService {
 		List<Map<String, Object>> columnProfiles = columnsToInspect.stream()
 			.map(column -> buildColumnProfile(context, actualTableName, column, totalRows, sampleLimit))
 			.toList();
-		String summary = "Profiled %d columns from '%s' using visible columns only.".formatted(columnProfiles.size(),
+		String summary = "仅基于可见字段对表 '%s' 的 %d 个字段完成 profile 分析。".formatted(columnProfiles.size(),
 				actualTableName);
 		return SqlGuardCheckResult.builder()
 			.action(ACTION_DATA_PROFILE)
@@ -235,21 +235,21 @@ public class SqlVerifyExplainService {
 			.usedTables(List.of(actualTableName))
 			.columnProfiles(columnProfiles)
 			.fixSuggestions(
-					List.of("Use categorical fields with concentrated topValues as filters or GROUP BY candidates.",
-							"Use numeric/date fields with min/max ranges as metric, trend, or time-window candidates."))
+					List.of("可优先把高频值集中的分类字段用作过滤条件或 GROUP BY 候选字段。",
+							"可优先把具备 min/max 范围的数值或时间字段用作指标、趋势或时间窗口候选字段。"))
 			.build();
 	}
 
 	private ProfileContext resolveProfileContext(String agentId) {
 		if (!StringUtils.isNumeric(agentId)) {
-			throw new IllegalArgumentException("sql_guard.check DATA_PROFILE only supports numeric agentId");
+			throw new IllegalArgumentException("sql_guard.check 的 DATA_PROFILE 当前仅支持数值型 agentId");
 		}
 		Long numericAgentId = Long.valueOf(agentId);
 		AgentDatasource agentDatasource = agentDatasourceService.getCurrentAgentDatasource(numericAgentId);
 		Datasource datasource = agentDatasource.getDatasource() != null ? agentDatasource.getDatasource()
 				: datasourceService.getDatasourceById(agentDatasource.getDatasourceId());
 		if (datasource == null) {
-			throw new IllegalStateException("Active datasource not found for agent " + agentId);
+			throw new IllegalStateException("当前 Agent 未找到活动数据源：" + agentId);
 		}
 		DbConfigBO dbConfig = datasourceService.getDbConfig(datasource);
 		Accessor accessor = accessorFactory.getAccessorByDbConfig(dbConfig);
@@ -260,7 +260,7 @@ public class SqlVerifyExplainService {
 					: explicitSelectedTables;
 		}
 		catch (Exception ex) {
-			throw new IllegalStateException("Failed to load visible tables for datasource %s: %s"
+			throw new IllegalStateException("加载数据源 %s 的可见表失败：%s"
 				.formatted(datasource.getId(), ex.getMessage()), ex);
 		}
 		Map<String, List<String>> visibleTablesByName = indexTables(visibleTables, false);
@@ -289,7 +289,7 @@ public class SqlVerifyExplainService {
 		}
 		catch (Exception ex) {
 			throw new IllegalStateException(
-					"Failed to load columns for table '%s': %s".formatted(tableName, ex.getMessage()), ex);
+					"加载表 '%s' 的字段失败：%s".formatted(tableName, ex.getMessage()), ex);
 		}
 	}
 
@@ -321,7 +321,7 @@ public class SqlVerifyExplainService {
 		for (String requestedColumn : requestedColumns) {
 			ColumnInfoBO column = columnsByName.get(normalizeColumnName(requestedColumn));
 			if (column == null) {
-				throw new IllegalArgumentException("Column '%s' is not visible in table '%s' for current agent"
+				throw new IllegalArgumentException("字段 '%s' 在表 '%s' 中对当前 Agent 不可见"
 					.formatted(requestedColumn, tableName));
 			}
 			resolvedColumns.add(column);
@@ -411,16 +411,16 @@ public class SqlVerifyExplainService {
 			List<Map<String, Object>> topValues) {
 		List<String> hints = new ArrayList<>();
 		if (Boolean.TRUE.equals(isLikelyCategorical(column, distinctCount, totalRows, topValues))) {
-			hints.add("Likely categorical field; suitable for filter or GROUP BY.");
+			hints.add("该字段很可能是枚举或分类字段，适合用于过滤条件或 GROUP BY。");
 		}
 		if (supportsMinMax(column)) {
-			hints.add("Likely ordered field; suitable for range filter, metric, or trend axis.");
+			hints.add("该字段很可能具备顺序语义，适合用于范围过滤、指标计算或趋势轴。");
 		}
 		if (nullRatio != null && nullRatio >= 0.5D) {
-			hints.add("High null ratio; be careful when using it as a hard filter.");
+			hints.add("该字段空值比例较高，作为强过滤条件时需要谨慎。");
 		}
 		if (hints.isEmpty()) {
-			hints.add("Inspect samples and top values before deciding whether to use it in SQL.");
+			hints.add("请先结合样例值和高频值判断，再决定是否将该字段写入 SQL。");
 		}
 		return hints;
 	}
@@ -478,7 +478,7 @@ public class SqlVerifyExplainService {
 			return resultSet;
 		}
 		catch (Exception ex) {
-			throw new IllegalStateException("Failed to execute profile SQL: " + ex.getMessage(), ex);
+			throw new IllegalStateException("执行 profile SQL 失败：" + ex.getMessage(), ex);
 		}
 	}
 
@@ -555,7 +555,7 @@ public class SqlVerifyExplainService {
 	private String resolveVisibleTableName(ProfileContext context, String tableName) {
 		return findVisibleTableName(context.visibleTablesByName(), context.visibleTablesByLeafName(), tableName, false)
 			.orElseThrow(
-					() -> new IllegalArgumentException("Table '%s' is not visible for current agent. Visible tables: %s"
+					() -> new IllegalArgumentException("表 '%s' 对当前 Agent 不可见。当前可见表：%s"
 						.formatted(tableName, String.join(", ", context.visibleTables()))));
 	}
 
@@ -567,7 +567,7 @@ public class SqlVerifyExplainService {
 			return Optional.of(exactMatches.get(0));
 		}
 		if (exactMatches.size() > 1) {
-			throw new IllegalArgumentException("Table '%s' maps to multiple visible tables: %s".formatted(tableName,
+			throw new IllegalArgumentException("表 '%s' 映射到了多张当前可见表：%s".formatted(tableName,
 					String.join(", ", exactMatches)));
 		}
 		if (isQualifiedIdentifier(tableName) && !allowQualifiedFallback) {
@@ -578,7 +578,7 @@ public class SqlVerifyExplainService {
 			return Optional.of(leafMatches.get(0));
 		}
 		if (leafMatches.size() > 1) {
-			throw new IllegalArgumentException("Table '%s' is ambiguous across visible tables: %s".formatted(tableName,
+			throw new IllegalArgumentException("表 '%s' 在当前可见表范围内存在歧义：%s".formatted(tableName,
 					String.join(", ", leafMatches)));
 		}
 		return Optional.empty();

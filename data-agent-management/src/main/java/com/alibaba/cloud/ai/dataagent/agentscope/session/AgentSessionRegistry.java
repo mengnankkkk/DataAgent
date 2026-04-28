@@ -76,7 +76,7 @@ public class AgentSessionRegistry {
 
 	private RequestExecutionState getOrCreateState(String threadId, String runtimeRequestId) {
 		if (threadId == null || threadId.isBlank() || runtimeRequestId == null || runtimeRequestId.isBlank()) {
-			throw new IllegalArgumentException("threadId and runtimeRequestId must not be blank");
+			throw new IllegalArgumentException("threadId 和 runtimeRequestId 不能为空");
 		}
 		ConcurrentHashMap<String, RequestExecutionState> states = requestStatesByThreadId.computeIfAbsent(threadId,
 				key -> new ConcurrentHashMap<>());

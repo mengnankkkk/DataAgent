@@ -188,7 +188,7 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 					.writeValueAsString(datasourceExplorerService.execute(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("Datasource explorer tool failed: " + ex.getMessage(), ex);
+				throw new IllegalStateException("数据源探索工具执行失败：" + ex.getMessage(), ex);
 			}
 		}
 

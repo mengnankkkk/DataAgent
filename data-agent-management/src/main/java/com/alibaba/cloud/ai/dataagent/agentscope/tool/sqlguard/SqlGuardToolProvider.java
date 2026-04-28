@@ -38,7 +38,7 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			    "action": {
 			      "type": "string",
 			      "enum": ["SQL_VERIFY", "DATA_PROFILE"],
-			      "description": "可选。默认 SQL_VERIFY。SQL_VERIFY 用于候选 SQL 的结构与意图校验；DATA_PROFILE 用于查看字段值域、空值率、distinct、top values 与样例。"
+			      "description": "可选。默认 SQL_VERIFY。SQL_VERIFY 用于校验候选 SQL 是否真正符合用户意图；DATA_PROFILE 仅用于在少量关键候选字段语义仍不明确，且这种不确定性会影响过滤、分组、排序、时间窗口或指标写法时，补充查看字段值分布。"
 			    },
 			    "query": {
 			      "type": "string",
@@ -57,11 +57,11 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			      "items": {
 			        "type": "string"
 			      },
-			      "description": "DATA_PROFILE 时可选。要分析的字段列表；不传时默认取该表前几个可见字段。"
+			      "description": "DATA_PROFILE 时可选。优先只传需要诊断的少量关键字段；不传时默认取该表前几个可见字段。"
 			    },
 			    "limit": {
 			      "type": "integer",
-			      "description": "DATA_PROFILE 时可选。样例值和 top values 的返回上限，默认 5，最大 20。"
+			      "description": "DATA_PROFILE 时可选。样例值和高频值的返回上限，默认 5，最大 20。"
 			    },
 			    "tableSchemas": {
 			      "type": "object",
@@ -80,14 +80,14 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			""";
 
 	private static final String DESCRIPTION = """
-			Unified SQL guard tool for SQL-backed answers.
-			Action SQL_VERIFY: check whether the candidate SQL really matches the user's intent before execution or final answer.
-			Action DATA_PROFILE: inspect column value distribution only when a small set of candidate columns remain semantically ambiguous after schema inspection, and that ambiguity would materially change filters, grouping, ordering, time windows, or metric logic.
-			Do not call DATA_PROFILE as a default preflight step for every query. Skip it when the user request and schema already make the relevant columns obvious.
-			When using DATA_PROFILE, prefer focused columnNames instead of profiling an entire table.
-			For SQL_VERIFY, if verification fails, read isAligned=false plus problems, ruleChecks and fixSuggestions, then rewrite SQL yourself and call sql_guard.check again.
-			For DATA_PROFILE, use the returned columnProfiles to understand null ratio, distinct count, top values, samples, and whether a field looks categorical, numeric, or temporal.
-			Always pass fresh top-level parameters for the current action. Do not pass previous sql_guard.check output back into the tool.
+			统一 SQL 守卫工具，供所有基于 SQL 的回答使用。
+			1. `action=SQL_VERIFY`：在执行 SQL 或基于 SQL 生成最终回答前，检查候选 SQL 是否真正符合用户意图。
+			2. `action=DATA_PROFILE`：只有在完成 schema 检查后，仍有少量关键候选字段语义不明确，且这种不确定性会实质影响过滤、分组、排序、时间窗口或指标写法时，才用于补充查看字段值分布。
+			3. 不要把 DATA_PROFILE 当作每次查询的默认前置步骤；如果用户问题、schema 和列名已经足够明确，就直接跳过。
+			4. 使用 DATA_PROFILE 时，优先传少量关键 `columnNames`，不要对整张表做无差别 profile。
+			5. 如果 SQL_VERIFY 返回 `isAligned=false`，请读取 `problems`、`ruleChecks` 和 `fixSuggestions`，自行改写 SQL 后再次调用 `sql_guard.check`。
+			6. 如果使用 DATA_PROFILE，请重点读取返回的 `columnProfiles`，理解空值率、去重计数、高频值、样例值，以及字段更像枚举、数值还是时间字段。
+			7. 每次调用都要传当前动作需要的最新顶层参数，不要把上一轮 `sql_guard.check` 的输出对象原样回传给工具。
 			""";
 
 	private final ObjectMapper objectMapper;
@@ -152,12 +152,12 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 				SqlGuardCheckResult result = switch (action) {
 					case "DATA_PROFILE" -> sqlVerifyExplainService.inspectProfile(agentId, request);
 					case "SQL_VERIFY" -> sqlVerifyExplainService.explain(request);
-					default -> throw new IllegalArgumentException("Unsupported sql_guard.check action: " + action);
+					default -> throw new IllegalArgumentException("不支持的 sql_guard.check 动作：" + action);
 				};
 				return objectMapper.writeValueAsString(result);
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("Failed to execute sql_guard.check: " + ex.getMessage(), ex);
+				throw new IllegalStateException("sql_guard.check 执行失败：" + ex.getMessage(), ex);
 			}
 		}
 

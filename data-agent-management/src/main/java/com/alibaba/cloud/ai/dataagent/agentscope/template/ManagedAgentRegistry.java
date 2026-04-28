@@ -35,7 +35,7 @@ public class ManagedAgentRegistry {
 	public ManagedAgent getRequired() {
 		ManagedAgent managedAgent = this.agentsByType.get(normalize(CommonAgent.AGENT_TYPE));
 		if (managedAgent == null) {
-			throw new IllegalStateException("ManagedAgent registry missing type: " + CommonAgent.AGENT_TYPE);
+			throw new IllegalStateException("ManagedAgent 注册表缺少类型：" + CommonAgent.AGENT_TYPE);
 		}
 		return managedAgent;
 	}

@@ -101,7 +101,7 @@ public class SemanticModelToolSupport {
 					.writeValueAsString(semanticModelSearchService.search(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("Failed to search semantic model hints: " + ex.getMessage(), ex);
+				throw new IllegalStateException("语义模型提示检索失败：" + ex.getMessage(), ex);
 			}
 		}
 

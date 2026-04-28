@@ -78,7 +78,7 @@ public class SpringToolCallbackAgentAdapter implements AgentTool {
 		}
 		catch (Exception ex) {
 			log.error("Spring AI tool callback execution failed. tool={}", getName(), ex);
-			return ToolResultBlock.error(ex.getMessage() == null ? "Tool execution failed." : ex.getMessage())
+			return ToolResultBlock.error(ex.getMessage() == null ? "工具执行失败。" : ex.getMessage())
 				.withIdAndName(toolCallParam.getToolUseBlock().getId(), getName());
 		}
 	}

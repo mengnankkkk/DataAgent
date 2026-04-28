@@ -132,7 +132,7 @@ public class DomainBusinessKnowledgeToolSupport {
 					.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("Failed to search domain business knowledge: " + ex.getMessage(), ex);
+				throw new IllegalStateException("领域业务知识检索失败：" + ex.getMessage(), ex);
 			}
 		}
 

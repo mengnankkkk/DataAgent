@@ -194,7 +194,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		}
 		log.error("AgentScope runtime failed, threadId={}", threadId, error);
 		if (sessionRegistry.isActive(threadId, runtimeRequestId)) {
-			String message = error.getMessage() == null ? "AgentScope runtime failed." : error.getMessage();
+			String message = error.getMessage() == null ? "AgentScope 运行失败。" : error.getMessage();
 			sink.tryEmitNext(ServerSentEvent.builder(GraphNodeResponse.error(request.getAgentId(), threadId, message))
 				.event(STREAM_EVENT_ERROR)
 				.build());
@@ -379,13 +379,13 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 
 	private void validateModelConfig(ModelConfigDTO modelConfig) {
 		if (modelConfig == null) {
-			throw new IllegalStateException("No active CHAT model configured. Please configure it in the dashboard.");
+			throw new IllegalStateException("当前未配置可用的 CHAT 模型，请先在控制台完成配置。");
 		}
 		if (!StringUtils.hasText(modelConfig.getApiKey())) {
-			throw new IllegalStateException("Active CHAT model apiKey is empty.");
+			throw new IllegalStateException("当前活动 CHAT 模型的 apiKey 为空。");
 		}
 		if (!StringUtils.hasText(modelConfig.getModelName())) {
-			throw new IllegalStateException("Active CHAT model modelName is empty.");
+			throw new IllegalStateException("当前活动 CHAT 模型的 modelName 为空。");
 		}
 	}
 

@@ -54,7 +54,7 @@ public class SemanticModelSearchService {
 			@Nullable GraphRequest graphRequest) {
 		if (!StringUtils.hasText(agentId)) {
 			return emptyResult(request == null ? null : request.getQuery(),
-					"semantic_model.search requires a numeric agent id.");
+					"semantic_model.search 需要数值型 agentId 参数。");
 		}
 		Long parsedAgentId;
 		try {
@@ -62,7 +62,7 @@ public class SemanticModelSearchService {
 		}
 		catch (NumberFormatException ex) {
 			return emptyResult(request == null ? null : request.getQuery(),
-					"semantic_model.search requires a numeric agent id.");
+					"semantic_model.search 需要数值型 agentId 参数。");
 		}
 		return search(parsedAgentId, request, graphRequest);
 	}
@@ -75,17 +75,17 @@ public class SemanticModelSearchService {
 			@Nullable GraphRequest graphRequest) {
 		String query = request == null ? null : request.getQuery();
 		if (!StringUtils.hasText(query)) {
-			throw new IllegalArgumentException("query is required for semantic_model.search");
+			throw new IllegalArgumentException("semantic_model.search 需要 query 参数");
 		}
 		AgentDatasource activeDatasource = resolveActiveDatasource(agentId);
 		if (activeDatasource == null || activeDatasource.getDatasourceId() == null) {
-			return emptyResult(query, "No active datasource is available for semantic_model.search.");
+			return emptyResult(query, "当前没有可用于 semantic_model.search 的活动数据源。");
 		}
 		TableSearchScope scope = resolveTableSearchScope(activeDatasource,
 				request == null ? null : request.getTableNames());
 		if (scope.isScoped() && CollectionUtils.isEmpty(scope.getTableNames())) {
 			return emptyResult(query,
-					"Requested tables are outside the active datasource visibility scope for semantic_model.search.");
+					"请求中指定的表超出了当前活动数据源对 semantic_model.search 的可见范围。");
 		}
 		List<SemanticModel> candidates = scope.isUnbounded()
 				? semanticModelService.getEnabledByAgentIdAndDatasourceId(agentId, activeDatasource.getDatasourceId())
@@ -93,7 +93,7 @@ public class SemanticModelSearchService {
 						activeDatasource.getDatasourceId(), scope.getTableNames());
 		if (CollectionUtils.isEmpty(candidates)) {
 			return emptyResult(query,
-					"No enabled semantic model entries matched this agent/table scope. Use datasource explorer for physical schema details.");
+					"当前 Agent/表范围内没有匹配的已启用语义模型条目；物理 schema 请改用 datasource explorer 查看。");
 		}
 
 		List<ScoredHit> scoredHits = candidates.stream()
@@ -112,7 +112,7 @@ public class SemanticModelSearchService {
 
 		if (scoredHits.isEmpty()) {
 			return emptyResult(query,
-					"No supplemental semantic hints matched the query. If datasource explorer already answers the schema question, do not call semantic_model.search.");
+					"没有匹配到补充语义提示；如果 datasource explorer 已能回答 schema 问题，就不要额外调用 semantic_model.search。");
 		}
 
 		List<SemanticModelSearchHit> hits = scoredHits.stream().map(this::toHit).toList();

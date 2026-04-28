@@ -120,7 +120,7 @@ public class DatasourceExplorerService {
 	public DatasourceExplorerResult execute(String agentId, DatasourceExplorerRequest request,
 			@Nullable GraphRequest graphRequest) throws Exception {
 		if (request == null || request.getAction() == null) {
-			throw new IllegalArgumentException("Datasource explorer request.action 不能为空");
+			throw new IllegalArgumentException("数据源探索请求必须提供 action");
 		}
 		ExplorerContext context = resolveContext(agentId);
 		return switch (request.getAction()) {
@@ -294,7 +294,7 @@ public class DatasourceExplorerService {
 		Datasource datasource = agentDatasource.getDatasource() != null ? agentDatasource.getDatasource()
 				: datasourceService.getDatasourceById(agentDatasource.getDatasourceId());
 		if (datasource == null) {
-			throw new IllegalStateException("Active datasource not found for agent " + agentId);
+			throw new IllegalStateException("当前 Agent 未找到活动数据源：" + agentId);
 		}
 		DbConfigBO dbConfig = datasourceService.getDbConfig(datasource);
 		Accessor accessor = accessorFactory.getAccessorByDbConfig(dbConfig);
@@ -342,7 +342,7 @@ public class DatasourceExplorerService {
 
 	private Long parseAgentId(String agentId) {
 		if (!StringUtils.isNumeric(agentId)) {
-			throw new IllegalArgumentException("Datasource explorer 当前仅支持数值型 agentId");
+			throw new IllegalArgumentException("数据源探索当前仅支持数值型 agentId");
 		}
 		return Long.valueOf(agentId);
 	}
@@ -830,7 +830,7 @@ public class DatasourceExplorerService {
 			return Optional.of(exactMatches.get(0));
 		}
 		if (exactMatches.size() > 1) {
-			throw new IllegalArgumentException("Table '%s' maps to multiple visible tables: %s".formatted(tableName,
+			throw new IllegalArgumentException("表 '%s' 映射到了多张当前可见表：%s".formatted(tableName,
 					String.join(", ", exactMatches)));
 		}
 		if (isQualifiedIdentifier(tableName) && !allowQualifiedFallback) {
@@ -841,14 +841,14 @@ public class DatasourceExplorerService {
 			return Optional.of(leafMatches.get(0));
 		}
 		if (leafMatches.size() > 1) {
-			throw new IllegalArgumentException("Table '%s' is ambiguous across visible tables: %s".formatted(tableName,
+			throw new IllegalArgumentException("表 '%s' 在当前可见表范围内存在歧义：%s".formatted(tableName,
 					String.join(", ", leafMatches)));
 		}
 		return Optional.empty();
 	}
 
 	private IllegalArgumentException buildInvisibleTableException(ExplorerContext context, String tableName) {
-		return new IllegalArgumentException("Table '%s' is not visible for current agent. Visible tables: %s"
+		return new IllegalArgumentException("表 '%s' 对当前 Agent 不可见。当前可见表：%s"
 			.formatted(tableName, String.join(", ", context.visibleTables())));
 	}
 
