@@ -18,16 +18,19 @@ package com.alibaba.cloud.ai.dataagent.service.semantic;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelImportItem;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelUpdateDTO;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.SemanticModelMapper;
 import com.alibaba.cloud.ai.dataagent.vo.BatchImportResult;
 import java.io.InputStream;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -35,6 +38,8 @@ import org.springframework.util.StringUtils;
 @AllArgsConstructor
 @Slf4j
 public class SemanticModelServiceImpl implements SemanticModelService {
+
+	private static final String DUPLICATE_SEMANTIC_MODEL_MESSAGE = "当前数据源下该表字段的语义模型已存在，请修改已有语义模型后再新增";
 
 	private final SemanticModelMapper semanticModelMapper;
 
@@ -86,18 +91,22 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 
 	@Override
 	public void addSemanticModel(SemanticModel semanticModel) {
-		semanticModelMapper.insert(semanticModel);
+		insertSemanticModel(semanticModel, DUPLICATE_SEMANTIC_MODEL_MESSAGE);
 	}
 
 	@Override
 	public boolean addSemanticModel(SemanticModelAddDTO dto) {
-		// 根据agentId查询关联的datasourceId
-		Integer datasourceId = findDatasourceIdByAgentId(dto.getAgentId());
+		validateAgentDatasourceBinding(dto.getAgentId(), dto.getDatasourceId());
 
-		// 转换DTO为Entity
+		SemanticModel existing = semanticModelMapper.selectByAgentIdAndDatasourceIdAndTableNameAndColumnName(
+				dto.getAgentId(), dto.getDatasourceId(), dto.getTableName(), dto.getColumnName());
+		if (existing != null) {
+			throw new IllegalArgumentException(DUPLICATE_SEMANTIC_MODEL_MESSAGE);
+		}
+
 		SemanticModel semanticModel = SemanticModel.builder()
 			.agentId(dto.getAgentId())
-			.datasourceId(datasourceId)
+			.datasourceId(dto.getDatasourceId())
 			.tableName(dto.getTableName())
 			.columnName(dto.getColumnName())
 			.businessName(dto.getBusinessName())
@@ -105,32 +114,26 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 			.businessDescription(dto.getBusinessDescription())
 			.columnComment(dto.getColumnComment())
 			.dataType(dto.getDataType())
-			.status(1) // 默认启用状态
+			.status(1)
 			.build();
 
-		// 保存到数据库
-		semanticModelMapper.insert(semanticModel);
-
+		insertSemanticModel(semanticModel, DUPLICATE_SEMANTIC_MODEL_MESSAGE);
 		return true;
 	}
 
-	/** 根据agentId查找关联的datasourceId 如果有多个数据源，返回第一个启用的数据源 */
-	private Integer findDatasourceIdByAgentId(Long agentId) {
-		List<AgentDatasource> agentDatasources = agentDatasourceMapper.selectByAgentId(agentId);
-
-		if (agentDatasources.isEmpty()) {
-			throw new RuntimeException("No datasource found for Agent ID " + agentId);
+	private AgentDatasource validateAgentDatasourceBinding(Long agentId, Integer datasourceId) {
+		if (agentId == null) {
+			throw new IllegalArgumentException("agentId不能为空");
 		}
-
-		// 优先返回启用的数据源
-		for (AgentDatasource ad : agentDatasources) {
-			if (ad.getIsActive() != null && ad.getIsActive() == 1) {
-				return ad.getDatasourceId();
-			}
+		if (datasourceId == null) {
+			throw new IllegalArgumentException("datasourceId不能为空");
 		}
-
-		// 如果没有启用的数据源，返回第一个
-		return agentDatasources.get(0).getDatasourceId();
+		AgentDatasource agentDatasource = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId, datasourceId);
+		if (agentDatasource == null) {
+			throw new IllegalArgumentException(
+					"未找到对应的智能体与数据源绑定关系: agentId=%s, datasourceId=%s".formatted(agentId, datasourceId));
+		}
+		return agentDatasource;
 	}
 
 	@Override
@@ -174,66 +177,53 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 			.failCount(0)
 			.build();
 
-		// 获取datasourceId
-		Integer datasourceId;
 		try {
-			datasourceId = findDatasourceIdByAgentId(dto.getAgentId());
+			validateAgentDatasourceBinding(dto.getAgentId(), dto.getDatasourceId());
 		}
 		catch (Exception e) {
-			log.error("获取数据源ID失败: agentId={}", dto.getAgentId(), e);
+			log.error("校验智能体数据源绑定失败: agentId={}, datasourceId={}", dto.getAgentId(), dto.getDatasourceId(), e);
 			result.setFailCount(dto.getItems().size());
-			result.addError("获取数据源ID失败: " + e.getMessage());
+			result.addError("校验智能体数据源绑定失败: " + e.getMessage());
 			return result;
 		}
 
-		// 遍历导入项
 		for (int i = 0; i < dto.getItems().size(); i++) {
 			SemanticModelImportItem item = dto.getItems().get(i);
 			try {
-				// 检查是否已存在
-				SemanticModel existing = semanticModelMapper.selectByAgentIdAndTableNameAndColumnName(dto.getAgentId(),
-						item.getTableName(), item.getColumnName());
+				SemanticModel existing = semanticModelMapper.selectByAgentIdAndDatasourceIdAndTableNameAndColumnName(
+						dto.getAgentId(), dto.getDatasourceId(), item.getTableName(), item.getColumnName());
 
 				if (existing != null) {
-					// 更新已存在的记录
-					existing.setBusinessName(item.getBusinessName());
-					existing.setSynonyms(item.getSynonyms());
-					existing.setBusinessDescription(item.getBusinessDescription());
-					existing.setColumnComment(item.getColumnComment());
-					existing.setDataType(item.getDataType());
-					semanticModelMapper.updateById(existing);
-					log.info("更新语义模型: agentId={}, tableName={}, columnName={}", dto.getAgentId(), item.getTableName(),
-							item.getColumnName());
+					result.setFailCount(result.getFailCount() + 1);
+					result.addError(buildDuplicateImportMessage(i + 1, item));
+					continue;
 				}
-				else {
-					// 插入新记录
-					SemanticModel newModel = SemanticModel.builder()
-						.agentId(dto.getAgentId())
-						.datasourceId(datasourceId)
-						.tableName(item.getTableName())
-						.columnName(item.getColumnName())
-						.businessName(item.getBusinessName())
-						.synonyms(item.getSynonyms())
-						.businessDescription(item.getBusinessDescription())
-						.columnComment(item.getColumnComment())
-						.dataType(item.getDataType())
-						.status(1) // 默认启用
-						.createdTime(
-								item.getCreateTime() != null ? item.getCreateTime() : java.time.LocalDateTime.now())
-						.build();
-					semanticModelMapper.insert(newModel);
-					log.info("插入语义模型: agentId={}, tableName={}, columnName={}", dto.getAgentId(), item.getTableName(),
-							item.getColumnName());
-				}
+
+				SemanticModel newModel = SemanticModel.builder()
+					.agentId(dto.getAgentId())
+					.datasourceId(dto.getDatasourceId())
+					.tableName(item.getTableName())
+					.columnName(item.getColumnName())
+					.businessName(item.getBusinessName())
+					.synonyms(item.getSynonyms())
+					.businessDescription(item.getBusinessDescription())
+					.columnComment(item.getColumnComment())
+					.dataType(item.getDataType())
+					.status(1)
+					.createdTime(item.getCreateTime() != null ? item.getCreateTime() : LocalDateTime.now())
+					.build();
+				insertSemanticModel(newModel, buildDuplicateImportMessage(i + 1, item));
+				log.info("插入语义模型: agentId={}, datasourceId={}, tableName={}, columnName={}", dto.getAgentId(),
+						dto.getDatasourceId(), item.getTableName(), item.getColumnName());
 
 				result.setSuccessCount(result.getSuccessCount() + 1);
 			}
 			catch (Exception e) {
-				log.error("导入第{}条记录失败: tableName={}, columnName={}", i + 1, item.getTableName(), item.getColumnName(),
-						e);
+				log.error("导入第{}条记录失败: datasourceId={}, tableName={}, columnName={}", i + 1, dto.getDatasourceId(),
+						item.getTableName(), item.getColumnName(), e);
 				result.setFailCount(result.getFailCount() + 1);
-				result.addError(String.format("第%d条记录失败 (%s.%s): %s", i + 1, item.getTableName(), item.getColumnName(),
-						e.getMessage()));
+				result.addError(
+						String.format("第%d条记录导入失败（%s.%s）: %s", i + 1, item.getTableName(), item.getColumnName(), e.getMessage()));
 			}
 		}
 
@@ -241,20 +231,19 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 	}
 
 	@Override
-	public BatchImportResult importFromExcel(InputStream inputStream, String filename, Long agentId) {
-		log.info("开始Excel导入: agentId={}, 文件名={}", agentId, filename);
+	public BatchImportResult importFromExcel(InputStream inputStream, String filename, Long agentId,
+			Integer datasourceId) {
+		log.info("开始Excel导入: agentId={}, datasourceId={}, 文件={}", agentId, datasourceId, filename);
 
 		try {
-			// 解析Excel文件
 			List<SemanticModelImportItem> items = excelService.parseExcel(inputStream, filename);
 
-			// 组装DTO
 			SemanticModelBatchImportDTO dto = SemanticModelBatchImportDTO.builder()
 				.agentId(agentId)
+				.datasourceId(datasourceId)
 				.items(items)
 				.build();
 
-			// 执行批量导入
 			BatchImportResult result = batchImport(dto);
 			log.info("Excel导入完成: 总数={}, 成功={}, 失败={}", result.getTotal(), result.getSuccessCount(),
 					result.getFailCount());
@@ -270,9 +259,17 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 	}
 
 	@Override
-	public void updateSemanticModel(Long id, SemanticModel semanticModel) {
-		semanticModel.setId(id);
-		semanticModelMapper.updateById(semanticModel);
+	public void updateSemanticModel(Long id, SemanticModelUpdateDTO semanticModelUpdateDto) {
+		SemanticModel existing = semanticModelMapper.selectById(id);
+		if (existing == null) {
+			throw new IllegalArgumentException("Semantic model not found");
+		}
+		existing.setBusinessName(semanticModelUpdateDto.getBusinessName());
+		existing.setSynonyms(semanticModelUpdateDto.getSynonyms());
+		existing.setBusinessDescription(semanticModelUpdateDto.getBusinessDescription());
+		existing.setColumnComment(semanticModelUpdateDto.getColumnComment());
+		existing.setDataType(semanticModelUpdateDto.getDataType());
+		semanticModelMapper.updateById(existing);
 	}
 
 	private List<String> normalizeTableNames(List<String> tableNames) {
@@ -282,6 +279,19 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 			.map(tableName -> tableName.toLowerCase(Locale.ROOT))
 			.distinct()
 			.toList();
+	}
+
+	private void insertSemanticModel(SemanticModel semanticModel, String duplicateMessage) {
+		try {
+			semanticModelMapper.insert(semanticModel);
+		}
+		catch (DuplicateKeyException e) {
+			throw new IllegalArgumentException(duplicateMessage, e);
+		}
+	}
+
+	private String buildDuplicateImportMessage(int rowNumber, SemanticModelImportItem item) {
+		return String.format("第%d条记录已存在，请修改后再导入（%s.%s）", rowNumber, item.getTableName(), item.getColumnName());
 	}
 
 }

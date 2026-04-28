@@ -119,17 +119,15 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 	private boolean initializeAgentDataSource(Agent agent) {
 		try {
 			Long agentId = agent.getId();
-
-			boolean hasData = isAlreadyInitialized(agentId);
+			AgentDatasource activeDatasource = agentDatasourceService.getCurrentAgentDatasource(agentId);
+			Integer datasourceId = activeDatasource.getDatasourceId();
+			boolean hasData = isAlreadyInitialized(agentId, datasourceId);
 
 			if (hasData) {
-				log.info("Agent {} already has vector data , skipping initialization", agentId);
+				log.info("Agent {} already has schema vector data for datasource {}, skipping initialization", agentId,
+						datasourceId);
 				return true;
 			}
-
-			AgentDatasource activeDatasource = agentDatasourceService.getCurrentAgentDatasource(agentId);
-
-			Integer datasourceId = activeDatasource.getDatasourceId();
 
 			List<String> tables = activeDatasource.getSelectTables();
 
@@ -159,13 +157,15 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 		}
 	}
 
-	private boolean isAlreadyInitialized(Long agentId) {
+	private boolean isAlreadyInitialized(Long agentId, Integer datasourceId) {
 		try {
 			String agentIdStr = String.valueOf(agentId);
-			return agentVectorStoreService.hasDocuments(agentIdStr);
+			String datasourceIdStr = String.valueOf(datasourceId);
+			return agentVectorStoreService.hasSchemaDocuments(agentIdStr, datasourceIdStr);
 		}
 		catch (Exception e) {
-			log.error("Failed to check initialization status for agent: {}, assuming not initialized", agentId, e);
+			log.error("Failed to check initialization status for agent: {} and datasource: {}, assuming not initialized",
+					agentId, datasourceId, e);
 			return false;
 		}
 	}

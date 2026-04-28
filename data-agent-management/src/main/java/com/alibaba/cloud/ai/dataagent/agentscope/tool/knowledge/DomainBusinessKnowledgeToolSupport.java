@@ -44,7 +44,7 @@ public class DomainBusinessKnowledgeToolSupport {
 			    },
 			    "knowledgeTypes": {
 			      "type": "array",
-			      "description": "可选。限定知识范围。支持 businessTerm、agentKnowledge、document、qa、faq、all。",
+			      "description": "可选。限定知识范围。支持 businessKnowledge、agentKnowledge、document、qa、faq、all。兼容旧别名 businessTerm。",
 			      "items": {
 			        "type": "string"
 			      }

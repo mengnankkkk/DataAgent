@@ -47,6 +47,10 @@ public interface AgentDatasourceMapper {
 	AgentDatasource selectByAgentIdAndDatasourceId(@Param("agentId") Long agentId,
 			@Param("datasourceId") Integer datasourceId);
 
+	/** Query associations by datasource ID */
+	@Select("SELECT * FROM agent_datasource WHERE datasource_id = #{datasourceId} ORDER BY create_time DESC")
+	List<AgentDatasource> selectByDatasourceId(@Param("datasourceId") Integer datasourceId);
+
 	/** Disable all data sources for an agent */
 	@Update("UPDATE agent_datasource SET is_active = 0 WHERE agent_id = #{agentId}")
 	int disableAllByAgentId(@Param("agentId") Long agentId);
@@ -58,6 +62,9 @@ public interface AgentDatasourceMapper {
 	@Select("SELECT COUNT(*) FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = 1 AND datasource_id != #{excludeDatasourceId}")
 	int countActiveByAgentIdExcluding(@Param("agentId") Long agentId,
 			@Param("excludeDatasourceId") Integer excludeDatasourceId);
+
+	@Select("SELECT COUNT(*) FROM agent_datasource WHERE agent_id = #{agentId} AND is_active = 1")
+	int countActiveByAgentId(@Param("agentId") Long agentId);
 
 	@Delete("DELETE FROM agent_datasource WHERE datasource_id = #{datasourceId}")
 	int deleteAllByDatasourceId(@Param("datasourceId") Integer datasourceId);

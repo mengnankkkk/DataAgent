@@ -32,6 +32,14 @@ public interface LogicalRelationMapper {
 	@Select("SELECT * FROM logical_relation WHERE id = #{id} AND is_deleted = 0")
 	LogicalRelation selectById(@Param("id") Integer id);
 
+	@Select("""
+			SELECT * FROM logical_relation
+			WHERE id = #{id}
+			  AND datasource_id = #{datasourceId}
+			  AND is_deleted = 0
+			""")
+	LogicalRelation selectByIdAndDatasourceId(@Param("id") Integer id, @Param("datasourceId") Integer datasourceId);
+
 	/**
 	 * 根据数据源ID查询逻辑外键列表（未删除的）
 	 */
@@ -71,11 +79,50 @@ public interface LogicalRelationMapper {
 			""")
 	int updateById(LogicalRelation logicalRelation);
 
+	@Update("""
+			<script>
+			UPDATE logical_relation
+			<set>
+			    <if test="logicalRelation.sourceTableName != null">source_table_name = #{logicalRelation.sourceTableName},</if>
+			    <if test="logicalRelation.sourceColumnName != null">source_column_name = #{logicalRelation.sourceColumnName},</if>
+			    <if test="logicalRelation.targetTableName != null">target_table_name = #{logicalRelation.targetTableName},</if>
+			    <if test="logicalRelation.targetColumnName != null">target_column_name = #{logicalRelation.targetColumnName},</if>
+			    <if test="logicalRelation.relationType != null">relation_type = #{logicalRelation.relationType},</if>
+			    <if test="logicalRelation.description != null">description = #{logicalRelation.description},</if>
+			    updated_time = NOW()
+			</set>
+			WHERE id = #{logicalRelation.id}
+			  AND datasource_id = #{datasourceId}
+			  AND is_deleted = 0
+			</script>
+			""")
+	int updateByIdAndDatasourceId(@Param("datasourceId") Integer datasourceId,
+			@Param("logicalRelation") LogicalRelation logicalRelation);
+
 	/**
 	 * 逻辑删除外键
 	 */
 	@Update("UPDATE logical_relation SET is_deleted = 1, updated_time = NOW() WHERE id = #{id}")
 	int deleteById(@Param("id") Integer id);
+
+	@Update("""
+			UPDATE logical_relation
+			SET is_deleted = 1, updated_time = NOW()
+			WHERE id = #{id}
+			  AND datasource_id = #{datasourceId}
+			  AND is_deleted = 0
+			""")
+	int deleteByIdAndDatasourceId(@Param("id") Integer id, @Param("datasourceId") Integer datasourceId);
+
+	@Delete("DELETE FROM logical_relation WHERE id = #{id}")
+	int hardDeleteById(@Param("id") Integer id);
+
+	@Delete("""
+			DELETE FROM logical_relation
+			WHERE id = #{id}
+			  AND datasource_id = #{datasourceId}
+			""")
+	int hardDeleteByIdAndDatasourceId(@Param("id") Integer id, @Param("datasourceId") Integer datasourceId);
 
 	/**
 	 * 逻辑删除数据源下的所有逻辑外键
@@ -98,5 +145,34 @@ public interface LogicalRelationMapper {
 	int checkExists(@Param("datasourceId") Integer datasourceId, @Param("sourceTableName") String sourceTableName,
 			@Param("sourceColumnName") String sourceColumnName, @Param("targetTableName") String targetTableName,
 			@Param("targetColumnName") String targetColumnName);
+
+	@Select("""
+			SELECT COUNT(*) FROM logical_relation
+			WHERE datasource_id = #{datasourceId}
+			  AND source_table_name = #{sourceTableName}
+			  AND source_column_name = #{sourceColumnName}
+			  AND target_table_name = #{targetTableName}
+			  AND target_column_name = #{targetColumnName}
+			  AND is_deleted = 0
+			  AND id != #{excludeId}
+			""")
+	int checkExistsExcludingId(@Param("datasourceId") Integer datasourceId,
+			@Param("sourceTableName") String sourceTableName, @Param("sourceColumnName") String sourceColumnName,
+			@Param("targetTableName") String targetTableName, @Param("targetColumnName") String targetColumnName,
+			@Param("excludeId") Integer excludeId);
+
+	@Select("""
+			SELECT * FROM logical_relation
+			WHERE datasource_id = #{datasourceId}
+			  AND source_table_name = #{sourceTableName}
+			  AND source_column_name = #{sourceColumnName}
+			  AND target_table_name = #{targetTableName}
+			  AND target_column_name = #{targetColumnName}
+			  AND is_deleted = 1
+			ORDER BY updated_time DESC, id DESC
+			""")
+	List<LogicalRelation> selectDeletedByBusinessKey(@Param("datasourceId") Integer datasourceId,
+			@Param("sourceTableName") String sourceTableName, @Param("sourceColumnName") String sourceColumnName,
+			@Param("targetTableName") String targetTableName, @Param("targetColumnName") String targetColumnName);
 
 }

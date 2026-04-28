@@ -39,6 +39,8 @@ public interface ChatSessionService {
 	 */
 	ChatSession findBySessionId(String sessionId);
 
+	ChatSession requireSessionForAgent(String sessionId, Long agentId);
+
 	/**
 	 * Clear all sessions for an agent
 	 */
@@ -49,19 +51,27 @@ public interface ChatSessionService {
 	 */
 	void updateSessionTime(String sessionId);
 
+	void updateSessionTime(String sessionId, Long agentId);
+
 	/**
 	 * 置顶/取消置顶会话
 	 */
 	void pinSession(String sessionId, boolean isPinned);
+
+	void pinSession(String sessionId, boolean isPinned, Long agentId);
 
 	/**
 	 * Rename session
 	 */
 	void renameSession(String sessionId, String newTitle);
 
+	void renameSession(String sessionId, String newTitle, Long agentId);
+
 	/**
 	 * Delete a single session
 	 */
 	void deleteSession(String sessionId);
+
+	void deleteSession(String sessionId, Long agentId);
 
 }

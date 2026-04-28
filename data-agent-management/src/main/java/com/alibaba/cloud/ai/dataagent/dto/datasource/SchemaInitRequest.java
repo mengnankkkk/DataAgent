@@ -26,6 +26,8 @@ public class SchemaInitRequest implements Serializable {
 
 	private DbConfigBO dbConfig;
 
+	private Long agentId;
+
 	private List<String> tables;
 
 	private Map<String, List<String>> visibleColumnsByTable;
@@ -36,6 +38,14 @@ public class SchemaInitRequest implements Serializable {
 
 	public void setDbConfig(DbConfigBO dbConfig) {
 		this.dbConfig = dbConfig;
+	}
+
+	public Long getAgentId() {
+		return agentId;
+	}
+
+	public void setAgentId(Long agentId) {
+		this.agentId = agentId;
 	}
 
 	public List<String> getTables() {
@@ -56,8 +66,8 @@ public class SchemaInitRequest implements Serializable {
 
 	@Override
 	public String toString() {
-		return "SchemaInitRequest{" + "dbConfig=" + dbConfig + ", tables=" + tables + ", visibleColumnsByTable="
-				+ visibleColumnsByTable + '}';
+		return "SchemaInitRequest{" + "dbConfig=" + dbConfig + ", agentId=" + agentId + ", tables=" + tables
+				+ ", visibleColumnsByTable=" + visibleColumnsByTable + '}';
 	}
 
 	@Override
@@ -67,13 +77,14 @@ public class SchemaInitRequest implements Serializable {
 		if (o == null || getClass() != o.getClass())
 			return false;
 		SchemaInitRequest that = (SchemaInitRequest) o;
-		return Objects.equals(dbConfig, that.dbConfig) && Objects.equals(tables, that.tables)
+		return Objects.equals(dbConfig, that.dbConfig) && Objects.equals(agentId, that.agentId)
+				&& Objects.equals(tables, that.tables)
 				&& Objects.equals(visibleColumnsByTable, that.visibleColumnsByTable);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(dbConfig, tables, visibleColumnsByTable);
+		return Objects.hash(dbConfig, agentId, tables, visibleColumnsByTable);
 	}
 
 }

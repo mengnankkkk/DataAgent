@@ -41,6 +41,13 @@ public interface DBConnectionPool extends AutoCloseable {
 	 */
 	Connection getConnection(DbConfigBO config);
 
+	/**
+	 * Evict cached data source for the given configuration if present.
+	 * @param config the database configuration
+	 */
+	default void evict(DbConfigBO config) {
+	}
+
 	boolean supportedDataSourceType(String type);
 
 	String getConnectionPoolType();

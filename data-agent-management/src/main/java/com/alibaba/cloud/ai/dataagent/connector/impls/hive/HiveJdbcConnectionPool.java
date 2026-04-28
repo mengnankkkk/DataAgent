@@ -20,10 +20,12 @@ import com.alibaba.cloud.ai.dataagent.connector.pool.AbstractDBConnectionPool;
 import com.alibaba.cloud.ai.dataagent.enums.BizDataSourceTypeEnum;
 import com.alibaba.cloud.ai.dataagent.enums.ErrorCodeEnum;
 import com.alibaba.druid.pool.DruidDataSourceFactory;
+import com.alibaba.druid.pool.DruidDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
+import java.sql.DriverManager;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -93,7 +95,13 @@ public class HiveJdbcConnectionPool extends AbstractDBConnectionPool {
 		log.info("Creating Hive DataSource with custom configuration");
 		String driver = getDriver();
 		Map<String, String> props = new HiveDruidProperties(driver, url, username, password, "stat").toMap();
-		return DruidDataSourceFactory.createDataSource(props);
+		DruidDataSource dataSource = (DruidDataSource) DruidDataSourceFactory.createDataSource(props);
+		dataSource.setInitialSize(0);
+		dataSource.setMinIdle(0);
+		dataSource.setBreakAfterAcquireFailure(true);
+		dataSource.setConnectionErrorRetryAttempts(2);
+		dataSource.setTestWhileIdle(false);
+		return dataSource;
 	}
 
 	private static final class HiveDruidProperties {
@@ -123,14 +131,14 @@ public class HiveJdbcConnectionPool extends AbstractDBConnectionPool {
 			props.put(DruidDataSourceFactory.PROP_USERNAME, this.username);
 			props.put(DruidDataSourceFactory.PROP_PASSWORD, this.password);
 			props.put(DruidDataSourceFactory.PROP_FILTERS, this.filters);
-			props.put(DruidDataSourceFactory.PROP_INITIALSIZE, "5");
-			props.put(DruidDataSourceFactory.PROP_MINIDLE, "5");
+			props.put(DruidDataSourceFactory.PROP_INITIALSIZE, "0");
+			props.put(DruidDataSourceFactory.PROP_MINIDLE, "0");
 			props.put(DruidDataSourceFactory.PROP_MAXACTIVE, "20");
 			props.put(DruidDataSourceFactory.PROP_MAXWAIT, "60000");
 			props.put(DruidDataSourceFactory.PROP_TIMEBETWEENEVICTIONRUNSMILLIS, "60000");
 			props.put(DruidDataSourceFactory.PROP_MINEVICTABLEIDLETIMEMILLIS, "300000");
 			props.put(DruidDataSourceFactory.PROP_VALIDATIONQUERY, "SELECT 1");
-			props.put(DruidDataSourceFactory.PROP_TESTWHILEIDLE, "true");
+			props.put(DruidDataSourceFactory.PROP_TESTWHILEIDLE, "false");
 			props.put(DruidDataSourceFactory.PROP_TESTONBORROW, "false");
 			props.put(DruidDataSourceFactory.PROP_TESTONRETURN, "false");
 			return props;
@@ -141,7 +149,8 @@ public class HiveJdbcConnectionPool extends AbstractDBConnectionPool {
 	@Override
 	public ErrorCodeEnum ping(DbConfigBO config) {
 		log.info("Hive ping method called, url: {}", config.getUrl());
-		try (Connection connection = getConnection(config); Statement stmt = connection.createStatement()) {
+		try (Connection connection = DriverManager.getConnection(config.getUrl(), config.getUsername(),
+				config.getPassword()); Statement stmt = connection.createStatement()) {
 			log.info("Hive connection obtained, executing SELECT 1");
 			ResultSet rs = stmt.executeQuery("SELECT 1");
 			if (rs.next()) {

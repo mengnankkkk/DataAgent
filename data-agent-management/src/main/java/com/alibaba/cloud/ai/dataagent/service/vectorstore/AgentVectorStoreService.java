@@ -47,6 +47,12 @@ public interface AgentVectorStoreService {
 
 	boolean hasDocuments(String agentId);
 
+	boolean hasSchemaDocuments(String agentId);
+
+	boolean hasSchemaDocuments(String agentId, String datasourceId);
+
+	void deleteSchemaDocuments(String agentId, String datasourceId);
+
 	void addDocuments(String agentId, List<Document> documents);
 
 }

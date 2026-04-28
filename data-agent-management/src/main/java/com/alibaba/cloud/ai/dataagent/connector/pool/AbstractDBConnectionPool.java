@@ -117,6 +117,7 @@ public abstract class AbstractDBConnectionPool implements DBConnectionPool {
 				log.warn("Attempt {} to get database connection failed: {}", attempt, e.getMessage());
 
 				if (attempt == maxRetries) {
+					evict(config);
 					log.error("Failed to get database connection after {} attempts, URL: {}", maxRetries, jdbcUrl, e);
 					throw new RuntimeException("Failed to get database connection after " + maxRetries + " attempts",
 							e);
@@ -141,15 +142,27 @@ public abstract class AbstractDBConnectionPool implements DBConnectionPool {
 	 * @param password the database password
 	 * @return the cache key
 	 */
-	private String generateCacheKey(String url, String username, String password) {
+	protected String generateCacheKey(String url, String username, String password) {
 		return url + "|" + username + "|" + Objects.hashCode(password);
+	}
+
+	@Override
+	public void evict(DbConfigBO config) {
+		if (config == null || config.getUrl() == null) {
+			return;
+		}
+		String cacheKey = generateCacheKey(config.getUrl(), config.getUsername(), config.getPassword());
+		DataSource dataSource = DATA_SOURCE_CACHE.remove(cacheKey);
+		if (dataSource instanceof DruidDataSource druidDataSource) {
+			druidDataSource.close();
+		}
 	}
 
 	@Override
 	public void close() {
 		DATA_SOURCE_CACHE.values().forEach(dataSource -> {
-			if (dataSource instanceof DruidDataSource) {
-				((DruidDataSource) dataSource).close();
+			if (dataSource instanceof DruidDataSource druidDataSource) {
+				druidDataSource.close();
 			}
 		});
 		DATA_SOURCE_CACHE.clear();
@@ -175,20 +188,23 @@ public abstract class AbstractDBConnectionPool implements DBConnectionPool {
 		props.put(DruidDataSourceFactory.PROP_URL, url);
 		props.put(DruidDataSourceFactory.PROP_USERNAME, username);
 		props.put(DruidDataSourceFactory.PROP_PASSWORD, password);
-		props.put(DruidDataSourceFactory.PROP_INITIALSIZE, "5");
-		props.put(DruidDataSourceFactory.PROP_MINIDLE, "5");
+		props.put(DruidDataSourceFactory.PROP_INITIALSIZE, "0");
+		props.put(DruidDataSourceFactory.PROP_MINIDLE, "0");
 		props.put(DruidDataSourceFactory.PROP_MAXACTIVE, "20");
 		props.put(DruidDataSourceFactory.PROP_MAXWAIT, "10000");
 		props.put(DruidDataSourceFactory.PROP_TIMEBETWEENEVICTIONRUNSMILLIS, "60000");
 		props.put(DruidDataSourceFactory.PROP_FILTERS, filters);
 
 		DruidDataSource dataSource = (DruidDataSource) DruidDataSourceFactory.createDataSource(props);
+		dataSource.setInitialSize(0);
+		dataSource.setMinIdle(0);
 		dataSource.setBreakAfterAcquireFailure(Boolean.TRUE);
 		dataSource.setConnectionErrorRetryAttempts(2);
+		dataSource.setTestWhileIdle(false);
 
 		// 记录数据源创建信息
 		log.info(
-				"Created new DataSource with optimized parameters - InitialSize: 5, MinIdle: 5, MaxActive: 20, MaxWait: 10000ms");
+				"Created new DataSource with optimized parameters - InitialSize: 0, MinIdle: 0, MaxActive: 20, MaxWait: 10000ms");
 
 		return dataSource;
 	}

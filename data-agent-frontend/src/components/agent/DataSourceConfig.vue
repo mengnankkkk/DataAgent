@@ -191,11 +191,19 @@
           >
             启用
           </el-button>
-          <el-button @click="testConnection(scope.row)" size="small" type="primary" round plain>
+          <el-button
+            @click="testConnection(scope.row)"
+            :disabled="scope.row.status !== 'active'"
+            size="small"
+            type="primary"
+            round
+            plain
+          >
             测试连接
           </el-button>
           <el-button
             @click="openForeignKeyDialog(scope.row)"
+            :disabled="scope.row.status !== 'active'"
             size="small"
             type="success"
             round
@@ -1270,20 +1278,46 @@
       // 更改数据源状态
       const changeDatasource = async (row: Datasource, active: boolean) => {
         const datasourceId = row.id;
+        if (!datasourceId) {
+          ElMessage.error('数据源ID不存在，无法切换状态');
+          return;
+        }
         try {
-          const response: ApiResponse = await agentDatasourceService.toggleDatasourceForAgent(
-            props.agentId,
-            { datasourceId, isActive: active },
-          );
-          if (response.success) {
-            ElMessage.success('操作成功！');
-            row.status = active ? 'active' : 'inactive';
+          if (active) {
+            const response: ApiResponse = await agentDatasourceService.addDatasourceToAgent(
+              String(props.agentId),
+              datasourceId,
+            );
+            if (response.success) {
+              ElMessage.success('已切换到对应数据源');
+              await loadAgentDatasource();
+            } else {
+              ElMessage.error(response.message || '切换数据源失败！');
+              console.error('Failed to switch datasource:', response);
+            }
           } else {
-            ElMessage.error('操作失败！');
-            console.error('Failed to change datasource:', response);
+            const activeDatasourceCount = datasource.value.filter(
+              item => item.status === 'active',
+            ).length;
+            if (row.status === 'active' && activeDatasourceCount <= 1) {
+              ElMessage.warning('当前智能体必须至少保留一个启用中的数据源');
+              return;
+            }
+
+            const response: ApiResponse = await agentDatasourceService.toggleDatasourceForAgent(
+              String(props.agentId),
+              { datasourceId, isActive: false },
+            );
+            if (response.success) {
+              ElMessage.success('操作成功！');
+              await loadAgentDatasource();
+            } else {
+              ElMessage.error(response.message || '操作失败！');
+              console.error('Failed to disable datasource:', response);
+            }
           }
         } catch (error) {
-          ElMessage.error('操作失败！');
+          ElMessage.error(getErrorMessage(error, active ? '切换数据源失败！' : '操作失败！'));
           console.error('Failed to change datasource:', error);
         }
       };
@@ -1291,6 +1325,10 @@
       // 测试数据源连接
       const testConnection = async (row: Datasource) => {
         const datasourceId = row.id;
+        if (row.status !== 'active') {
+          ElMessage.warning('禁用的数据源无需测试连接，请先启用');
+          return;
+        }
         try {
           const response: ApiResponse = await datasourceService.testConnection(datasourceId);
           if (response.success) {
@@ -1529,6 +1567,10 @@
       // 加载数据源的表列表
       const loadDatasourceTables = async (datasource: Datasource) => {
         if (!datasource.id) return;
+        if (datasource.status !== 'active') {
+          ElMessage.warning('禁用的数据源无需加载表结构，请先启用');
+          return;
+        }
 
         tableLoadingStates.value[datasource.id] = true;
         try {
@@ -1747,6 +1789,10 @@
           return;
         }
 
+        if (datasourceRow.status !== 'active') {
+          ElMessage.warning('禁用的数据源无需配置逻辑关系，请先启用');
+          return;
+        }
         currentForeignKeyDatasource.value = datasourceRow;
         foreignKeyDialogVisible.value = true;
 

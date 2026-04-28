@@ -17,6 +17,7 @@ package com.alibaba.cloud.ai.dataagent.service.semantic;
 
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelUpdateDTO;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.vo.BatchImportResult;
 import java.io.InputStream;
@@ -53,7 +54,7 @@ public interface SemanticModelService {
 
 	void deleteSemanticModel(Long id);
 
-	void updateSemanticModel(Long id, SemanticModel semanticModel);
+	void updateSemanticModel(Long id, SemanticModelUpdateDTO semanticModelUpdateDto);
 
 	default void addSemanticModels(List<SemanticModel> semanticModels) {
 		semanticModels.forEach(this::addSemanticModel);
@@ -78,8 +79,9 @@ public interface SemanticModelService {
 	 * @param inputStream Excel文件输入流
 	 * @param filename 文件名
 	 * @param agentId 智能体ID
+	 * @param datasourceId 数据源ID
 	 * @return 导入结果
 	 */
-	BatchImportResult importFromExcel(InputStream inputStream, String filename, Long agentId);
+	BatchImportResult importFromExcel(InputStream inputStream, String filename, Long agentId, Integer datasourceId);
 
 }

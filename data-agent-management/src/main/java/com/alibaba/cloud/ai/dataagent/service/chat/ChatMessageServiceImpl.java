@@ -34,6 +34,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
 	private final ChatMessageMapper chatMessageMapper;
 
+	private final ChatSessionService chatSessionService;
+
 	@Override
 	public List<ChatMessage> findBySessionId(String sessionId) {
 		return chatMessageMapper.selectBySessionId(sessionId);
@@ -42,6 +44,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 	@Override
 	public List<ChatMessage> findVisibleBySessionId(String sessionId) {
 		return chatMessageMapper.selectVisibleBySessionId(sessionId);
+	}
+
+	@Override
+	public List<ChatMessage> findVisibleBySessionId(String sessionId, Long agentId) {
+		chatSessionService.requireSessionForAgent(sessionId, agentId);
+		return findVisibleBySessionId(sessionId);
 	}
 
 	@Override
@@ -58,10 +66,24 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 	}
 
 	@Override
+	public List<ChatMessage> findBySessionIdAndMessageType(String sessionId, String messageType, Long agentId) {
+		chatSessionService.requireSessionForAgent(sessionId, agentId);
+		return findBySessionIdAndMessageType(sessionId, messageType);
+	}
+
+	@Override
 	public ChatMessage saveMessage(ChatMessage message) {
 		chatMessageMapper.insert(message);
 		log.info("Saved message: {} for session: {}", message.getId(), message.getSessionId());
 		return message;
+	}
+
+	@Override
+	public ChatMessage saveMessage(ChatMessage message, Long agentId) {
+		if (message != null) {
+			chatSessionService.requireSessionForAgent(message.getSessionId(), agentId);
+		}
+		return saveMessage(message);
 	}
 
 }

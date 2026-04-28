@@ -278,7 +278,7 @@
         }
 
         try {
-          await ChatService.renameSession(session.id, newTitle);
+          await ChatService.renameSession(session.id, Number(agentId.value), newTitle);
           session.title = newTitle;
           session.editing = false;
           ElMessage.success('会话标题已更新');
@@ -296,6 +296,30 @@
       // 计算属性
       const agentId = computed(() => route.params.id as string);
 
+      const parseAgentId = (value: unknown): number | null => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          return value;
+        }
+        if (typeof value === 'string' && value.trim()) {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+      };
+
+      const getRouteAgentId = (): number | null => {
+        const rawAgentId = route.params.id;
+        return parseAgentId(Array.isArray(rawAgentId) ? rawAgentId[0] : rawAgentId);
+      };
+
+      const requireRouteAgentId = (): number => {
+        const resolvedAgentId = getRouteAgentId();
+        if (resolvedAgentId === null) {
+          throw new Error('智能体ID无效，请刷新后重试');
+        }
+        return resolvedAgentId;
+      };
+
       // 方法
       const goBack = () => {
         router.push(`/agent/${agentId.value}`);
@@ -303,7 +327,7 @@
 
       const loadSessions = async () => {
         try {
-          sessions.value = await ChatService.getAgentSessions(parseInt(agentId.value));
+          sessions.value = await ChatService.getAgentSessions(requireRouteAgentId());
           // 默认选择第一个会话或创建新会话
           if (sessions.value.length > 0) {
             await props.handleSelectSession(sessions.value[0]);
@@ -318,7 +342,7 @@
 
       const createNewSession = async () => {
         try {
-          const newSession = await ChatService.createSession(parseInt(agentId.value), '新会话');
+          const newSession = await ChatService.createSession(requireRouteAgentId(), '新会话');
           sessions.value.unshift(newSession);
           await props.handleSelectSession(newSession);
           ElMessage.success('新会话创建成功');
@@ -330,7 +354,7 @@
 
       const togglePinSession = async (session: ChatSession) => {
         try {
-          await ChatService.pinSession(session.id, !session.isPinned);
+          await ChatService.pinSession(session.id, requireRouteAgentId(), !session.isPinned);
           session.isPinned = !session.isPinned;
           ElMessage.success(session.isPinned ? '会话已置顶' : '会话已取消置顶');
         } catch (error) {
@@ -346,7 +370,7 @@
             cancelButtonText: '取消',
             type: 'warning',
           });
-          await ChatService.deleteSession(session.id);
+          await ChatService.deleteSession(session.id, requireRouteAgentId());
           props.handleDeleteSessionState(session.id);
           sessions.value = sessions.value.filter((s: ChatSession) => s.id !== session.id);
           if (props.handleGetCurrentSession() == session) {
@@ -368,7 +392,7 @@
             cancelButtonText: '取消',
             type: 'warning',
           });
-          await ChatService.clearAgentSessions(parseInt(agentId.value));
+          await ChatService.clearAgentSessions(requireRouteAgentId());
           sessions.value.forEach((session: ChatSession) => {
             props.handleDeleteSessionState(session.id);
           });

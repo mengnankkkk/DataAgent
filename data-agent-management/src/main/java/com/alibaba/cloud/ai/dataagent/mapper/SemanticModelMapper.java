@@ -131,16 +131,11 @@ public interface SemanticModelMapper {
 			<script>
 			UPDATE semantic_model
 			<set>
-			    <if test="agentId != null">agent_id = #{agentId},</if>
-			    <if test="datasourceId != null">datasource_id = #{datasourceId},</if>
-			    <if test="tableName != null">table_name = #{tableName},</if>
-				<if test="columnName != null">column_name = #{columnName},</if>
 				<if test="businessName != null">business_name = #{businessName},</if>
 				<if test="synonyms != null">synonyms = #{synonyms},</if>
 				<if test="businessDescription != null">business_description = #{businessDescription},</if>
 				<if test="columnComment != null">column_comment = #{columnComment},</if>
 				<if test="dataType != null">data_type = #{dataType},</if>
-				<if test="status != null">status = #{status},</if>
 				updated_time = NOW()
 			</set>
 			WHERE id = #{id}
@@ -189,16 +184,24 @@ public interface SemanticModelMapper {
 			@Param("datasourceId") Integer datasourceId, @Param("tableNames") List<String> tableNames);
 
 	/**
-	 * Query semantic model based on agentId, tableName, and columnName
+	 * Query semantic model based on agentId, datasourceId, tableName, and columnName
 	 */
 	@Select("""
 			SELECT * FROM semantic_model
 			WHERE agent_id = #{agentId}
+			  AND datasource_id = #{datasourceId}
 			  AND table_name = #{tableName}
 			  AND column_name = #{columnName}
 			LIMIT 1
 			""")
-	SemanticModel selectByAgentIdAndTableNameAndColumnName(@Param("agentId") Long agentId,
+	SemanticModel selectByAgentIdAndDatasourceIdAndTableNameAndColumnName(@Param("agentId") Long agentId,
+			@Param("datasourceId") Integer datasourceId,
 			@Param("tableName") String tableName, @Param("columnName") String columnName);
+
+	@Delete("""
+			DELETE FROM semantic_model
+			WHERE datasource_id = #{datasourceId}
+			""")
+	int deleteByDatasourceId(@Param("datasourceId") Integer datasourceId);
 
 }

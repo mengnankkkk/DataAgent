@@ -82,6 +82,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 			// Create SchemaInitRequest
 			SchemaInitRequest schemaInitRequest = new SchemaInitRequest();
 			schemaInitRequest.setDbConfig(dbConfig);
+			schemaInitRequest.setAgentId(agentId);
 			schemaInitRequest.setTables(tables);
 			schemaInitRequest.setVisibleColumnsByTable(loadSelectedColumns(agentDatasource.getId()));
 
@@ -121,40 +122,53 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 
 		AgentDatasource result;
 		if (existing != null) {
-			// If it exists, activate the association
+			// If it exists, only reactivate the association and keep the historical
+			// table/column visibility configuration.
 			agentDatasourceMapper.enableRelation(agentId, datasourceId);
-
-			// 删除已有的表
-			tablesMapper.removeAllTables(existing.getId());
-			columnsMapper.removeAllColumns(existing.getId());
-
-			// Query and return the updated association
-			result = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId, datasourceId);
+			result = refreshAgentDatasource(agentId, datasourceId);
 		}
 		else {
 			// If it does not exist, create a new association
-			AgentDatasource agentDatasource = new AgentDatasource(agentId, datasourceId);
-			agentDatasource.setIsActive(1);
 			agentDatasourceMapper.createNewRelationEnabled(agentId, datasourceId);
-			result = agentDatasource;
+			result = refreshAgentDatasource(agentId, datasourceId);
 		}
-		result.setSelectTables(List.of());
-		result.setSelectColumns(Map.of());
 		return result;
 	}
 
 	@Override
+	@Transactional
 	public void removeDatasourceFromAgent(Long agentId, Integer datasourceId) {
+		AgentDatasource agentDatasource = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId, datasourceId);
+		if (agentDatasource == null) {
+			throw new RuntimeException("未找到相关的数据源关联记录");
+		}
+		if (agentDatasource.getIsActive() != null && agentDatasource.getIsActive() == 1) {
+			int activeCount = agentDatasourceMapper.countActiveByAgentId(agentId);
+			if (activeCount <= 1) {
+				throw new RuntimeException("当前智能体必须至少保留一个启用中的数据源");
+			}
+		}
 		agentDatasourceMapper.removeRelation(agentId, datasourceId);
 	}
 
 	@Override
 	public AgentDatasource toggleDatasourceForAgent(Long agentId, Integer datasourceId, Boolean isActive) {
+		AgentDatasource existingRelation = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId, datasourceId);
+		if (existingRelation == null) {
+			throw new RuntimeException("未找到相关的数据源关联记录");
+		}
+
 		// If enabling data source, first check if there are other enabled data sources
 		if (isActive) {
 			int activeCount = agentDatasourceMapper.countActiveByAgentIdExcluding(agentId, datasourceId);
 			if (activeCount > 0) {
 				throw new RuntimeException("同一智能体下只能启用一个数据源，请先禁用其他数据源后再启用此数据源");
+			}
+		}
+		else if (existingRelation.getIsActive() != null && existingRelation.getIsActive() == 1) {
+			int activeCount = agentDatasourceMapper.countActiveByAgentId(agentId);
+			if (activeCount <= 1) {
+				throw new RuntimeException("当前智能体必须至少保留一个启用中的数据源");
 			}
 		}
 

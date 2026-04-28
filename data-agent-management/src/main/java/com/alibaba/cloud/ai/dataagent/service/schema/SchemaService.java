@@ -26,15 +26,15 @@ public interface SchemaService {
 
 	Boolean schema(Integer datasourceId, SchemaInitRequest schemaInitRequest) throws Exception;
 
-	List<Document> getTableDocumentsByDatasource(Integer datasourceId, String query);
+	List<Document> getTableDocumentsByDatasource(String agentId, Integer datasourceId, String query);
 
 	void extractDatabaseName(SchemaDTO schemaDTO, DbConfigBO dbConfig);
 
 	void buildSchemaFromDocuments(String agentId, List<Document> columnDocumentList, List<Document> tableDocuments,
 			SchemaDTO schemaDTO);
 
-	List<Document> getTableDocuments(Integer datasourceId, List<String> tableNames);
+	List<Document> getTableDocuments(String agentId, Integer datasourceId, List<String> tableNames);
 
-	List<Document> getColumnDocumentsByTableName(Integer datasourceId, List<String> tableNames);
+	List<Document> getColumnDocumentsByTableName(String agentId, Integer datasourceId, List<String> tableNames);
 
 }

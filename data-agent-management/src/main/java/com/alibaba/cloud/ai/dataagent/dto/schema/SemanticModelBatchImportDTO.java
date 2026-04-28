@@ -37,6 +37,9 @@ public class SemanticModelBatchImportDTO {
 	@NotNull(message = "智能体ID不能为空")
 	private Long agentId;
 
+	@NotNull(message = "数据源ID不能为空")
+	private Integer datasourceId;
+
 	@NotEmpty(message = "导入数据不能为空")
 	@Valid
 	private List<SemanticModelImportItem> items;

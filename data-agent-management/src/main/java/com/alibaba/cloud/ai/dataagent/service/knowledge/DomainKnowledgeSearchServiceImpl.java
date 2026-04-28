@@ -128,7 +128,8 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 		}
 
 		SearchDiagnostics diagnostics = new SearchDiagnostics(agentId, businessTermDiagnostics.recalledCount(),
-				agentKnowledgeDiagnostics.recalledCount(), businessTermDiagnostics.vectorReady(),
+				businessTermDiagnostics.recalledCount(), agentKnowledgeDiagnostics.recalledCount(),
+				businessTermDiagnostics.vectorReady(), businessTermDiagnostics.vectorReady(),
 				agentKnowledgeDiagnostics.vectorReady());
 		DomainKnowledgeSearchResult result = new DomainKnowledgeSearchResult(query,
 				List.copyOf(options.appliedKnowledgeTypes()), List.copyOf(hits), List.copyOf(warnings), diagnostics);
@@ -230,7 +231,7 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 			if (knowledge.getIsRecall() == null || knowledge.getIsRecall() != 1) {
 				continue;
 			}
-			hits.add(new KnowledgeHit(DocumentMetadataConstant.BUSINESS_TERM, String.valueOf(knowledgeId),
+			hits.add(new KnowledgeHit("businessKnowledge", String.valueOf(knowledgeId),
 					knowledge.getBusinessTerm(), abbreviate(knowledge.getDescription(), MAX_SUMMARY_LENGTH),
 					abbreviate(document.getText(), MAX_SNIPPET_LENGTH), "businessKnowledge#" + knowledgeId, null));
 		}
@@ -303,7 +304,7 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 		if (CollectionUtils.isEmpty(request.knowledgeTypes())) {
 			categories.add(SearchCategory.BUSINESS_TERM);
 			categories.add(SearchCategory.AGENT_KNOWLEDGE);
-			appliedTypes.add("businessTerm");
+			appliedTypes.add("businessKnowledge");
 			appliedTypes.add("agentKnowledge");
 			return new NormalizedSearchOptions(List.copyOf(appliedTypes), List.copyOf(categories),
 					Set.copyOf(agentKnowledgeTypes), false, normalizedTopK, normalizedThreshold, List.copyOf(warnings));
@@ -318,13 +319,13 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 				case "all" -> {
 					categories.add(SearchCategory.BUSINESS_TERM);
 					categories.add(SearchCategory.AGENT_KNOWLEDGE);
-					addAppliedType(appliedTypes, "businessTerm");
+					addAppliedType(appliedTypes, "businessKnowledge");
 					addAppliedType(appliedTypes, "agentKnowledge");
 					filterAgentKnowledgeByType = false;
 				}
-				case "businessterm", "business_term", "business", "businessknowledge" -> {
+				case "businessknowledge", "business_knowledge", "businessterm", "business_term", "business" -> {
 					categories.add(SearchCategory.BUSINESS_TERM);
-					addAppliedType(appliedTypes, "businessTerm");
+					addAppliedType(appliedTypes, "businessKnowledge");
 				}
 				case "agentknowledge", "agent_knowledge", "agent", "knowledge" -> {
 					categories.add(SearchCategory.AGENT_KNOWLEDGE);
@@ -356,9 +357,9 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 		if (categories.isEmpty()) {
 			categories.add(SearchCategory.BUSINESS_TERM);
 			categories.add(SearchCategory.AGENT_KNOWLEDGE);
-			addAppliedType(appliedTypes, "businessTerm");
+			addAppliedType(appliedTypes, "businessKnowledge");
 			addAppliedType(appliedTypes, "agentKnowledge");
-			warnings.add("knowledgeTypes 全部无法识别，已回退为 businessTerm + agentKnowledge。");
+			warnings.add("knowledgeTypes 全部无法识别，已回退为 businessKnowledge + agentKnowledge。");
 			filterAgentKnowledgeByType = false;
 		}
 
@@ -462,7 +463,7 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 
 	private enum SearchCategory {
 
-		BUSINESS_TERM(DocumentMetadataConstant.BUSINESS_TERM, "businessTerm"),
+		BUSINESS_TERM(DocumentMetadataConstant.BUSINESS_TERM, "businessKnowledge"),
 
 		AGENT_KNOWLEDGE(DocumentMetadataConstant.AGENT_KNOWLEDGE, "agentKnowledge");
 

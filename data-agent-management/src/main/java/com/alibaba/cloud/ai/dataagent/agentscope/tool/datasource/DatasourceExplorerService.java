@@ -450,7 +450,8 @@ public class DatasourceExplorerService {
 			return Collections.emptyMap();
 		}
 		try {
-			return schemaService.getTableDocuments(context.datasource().getId(), tableNames)
+			return schemaService.getTableDocuments(context.agentDatasource().getAgentId().toString(),
+					context.datasource().getId(), tableNames)
 				.stream()
 				.collect(Collectors.toMap(doc -> normalizeTableName(String.valueOf(doc.getMetadata().get("name"))),
 						doc -> doc, (left, right) -> left, LinkedHashMap::new));
@@ -462,7 +463,8 @@ public class DatasourceExplorerService {
 
 	private Map<String, Document> loadColumnDocumentMap(ExplorerContext context, String tableName) {
 		try {
-			return schemaService.getColumnDocumentsByTableName(context.datasource().getId(), List.of(tableName))
+			return schemaService.getColumnDocumentsByTableName(context.agentDatasource().getAgentId().toString(),
+					context.datasource().getId(), List.of(tableName))
 				.stream()
 				.collect(Collectors.toMap(doc -> normalizeColumnName(String.valueOf(doc.getMetadata().get("name"))),
 						doc -> doc, (left, right) -> left, LinkedHashMap::new));

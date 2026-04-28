@@ -62,7 +62,9 @@ CREATE TABLE IF NOT EXISTS `semantic_model` (
   `created_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_semantic_model_agent_datasource_table_column` (`agent_id`, `datasource_id`, `table_name`, `column_name`) USING BTREE,
   KEY `idx_agent_id` (`agent_id`) USING BTREE,
+  KEY `idx_datasource_id` (`datasource_id`) USING BTREE,
   KEY `idx_field_name` (`business_name`) USING BTREE,
   KEY `idx_status` (`status`) USING BTREE,
   CONSTRAINT `fk_semantic_model_agent` FOREIGN KEY (`agent_id`) REFERENCES `agent` (`id`) ON DELETE CASCADE
@@ -133,6 +135,7 @@ CREATE TABLE IF NOT EXISTS logical_relation (
   created_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
+  UNIQUE KEY uk_logical_relation_unique_active_state (datasource_id, source_table_name, source_column_name, target_table_name, target_column_name, is_deleted),
   INDEX idx_datasource_id (datasource_id) COMMENT '加速根据数据源查找关系的查询',
   INDEX idx_source_table (datasource_id, source_table_name) COMMENT '加速根据表名查找关系的查询',
   FOREIGN KEY (datasource_id) REFERENCES datasource(id) ON DELETE CASCADE

@@ -88,7 +88,7 @@ public class LocalSkillServiceImpl implements LocalSkillService {
 
 			工作原则：
 			1. 不要在每一轮都调用工具。只有当回答明显依赖业务知识，或者你不确定业务口径时，才调用 `domain_business_knowledge.search`。
-			2. 默认优先检索 `businessTerm` 与 `agentKnowledge`。如果你明确知道要查 FAQ、QA 或文档，可以通过 `knowledgeTypes` 缩小范围。
+			2. 默认优先检索 `businessKnowledge` 与 `agentKnowledge`。如果你明确知道要查 FAQ、QA 或文档，可以通过 `knowledgeTypes` 缩小范围。
 			3. 将工具返回结果作为“证据”来辅助推理，而不是机械复述；回答时要提炼规则、说明口径，并在必要时指出来源。
 			4. 如果检索结果为空或证据冲突，必须明确告诉用户当前知识不足，不能编造业务规则。
 			5. 当问题会影响 SQL 过滤条件、指标定义、分析步骤时，优先调用该工具再继续生成回答或计划。

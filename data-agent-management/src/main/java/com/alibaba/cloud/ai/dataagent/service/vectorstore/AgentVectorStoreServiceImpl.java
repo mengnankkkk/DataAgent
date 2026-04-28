@@ -120,7 +120,11 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 			// 根据 vectorType 验证不同的字段
 			if (DocumentMetadataConstant.TABLE.equals(vectorType)
 					|| DocumentMetadataConstant.COLUMN.equals(vectorType)) {
-				// 表和列必须包含 datasourceId
+				// 表和列必须同时包含 datasourceId 和 agentId，且 agentId 必须匹配当前写入作用域
+				Assert.isTrue(document.getMetadata().containsKey(Constant.AGENT_ID),
+						"Document metadata must contain agentId for TABLE/COLUMN type.");
+				Assert.isTrue(document.getMetadata().get(Constant.AGENT_ID).equals(agentId),
+						"Document metadata agentId does not match.");
 				Assert.isTrue(document.getMetadata().containsKey(Constant.DATASOURCE_ID),
 						"Document metadata must contain datasourceId for TABLE/COLUMN type.");
 			}
@@ -263,11 +267,52 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 
 	@Override
 	public boolean hasDocuments(String agentId) {
+		return hasDocumentsByMetadata(agentId, Map.of(Constant.AGENT_ID, agentId)); /*
 		// 类似 MySQL 的 LIMIT 1,只检查是否存在文档
+		return hasDocumentsByMetadata(agentId, Map.of(Constant.AGENT_ID, agentId));
+	*/
+	}
+
+	@Override
+	public boolean hasSchemaDocuments(String agentId) {
+		return hasDocumentsByVectorType(agentId, DocumentMetadataConstant.TABLE)
+				&& hasDocumentsByVectorType(agentId, DocumentMetadataConstant.COLUMN);
+	}
+
+	@Override
+	public boolean hasSchemaDocuments(String agentId, String datasourceId) {
+		Map<String, Object> tableMetadata = Map.of(Constant.AGENT_ID, agentId, Constant.DATASOURCE_ID, datasourceId,
+				DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.TABLE);
+		Map<String, Object> columnMetadata = Map.of(Constant.AGENT_ID, agentId, Constant.DATASOURCE_ID, datasourceId,
+				DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.COLUMN);
+		return hasDocumentsByMetadata(agentId, tableMetadata) && hasDocumentsByMetadata(agentId, columnMetadata);
+	}
+
+	@Override
+	public void deleteSchemaDocuments(String agentId, String datasourceId) {
+		Assert.hasText(agentId, "AgentId cannot be empty.");
+		Assert.hasText(datasourceId, "DatasourceId cannot be empty.");
+		Map<String, Object> metadata = new HashMap<>();
+		metadata.put(Constant.AGENT_ID, agentId);
+		metadata.put(Constant.DATASOURCE_ID, datasourceId);
+		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.COLUMN);
+		deleteDocumentsByMetadata(metadata);
+		metadata.put(DocumentMetadataConstant.VECTOR_TYPE, DocumentMetadataConstant.TABLE);
+		deleteDocumentsByMetadata(metadata);
+	}
+
+	private boolean hasDocumentsByVectorType(String agentId, String vectorType) {
+		return hasDocumentsByMetadata(agentId,
+				Map.of(Constant.AGENT_ID, agentId, DocumentMetadataConstant.VECTOR_TYPE, vectorType));
+	}
+
+	private boolean hasDocumentsByMetadata(String agentId, Map<String, Object> metadata) {
+		Assert.hasText(agentId, "AgentId cannot be empty.");
+		Assert.notNull(metadata, "Metadata cannot be null.");
 		List<Document> docs = vectorStore.similaritySearch(org.springframework.ai.vectorstore.SearchRequest.builder()
-			.query(DEFAULT)// 使用默认的查询字符串，因为有的嵌入模型不支持空字符串
-			.filterExpression(buildFilterExpressionString(Map.of(Constant.AGENT_ID, agentId)))
-			.topK(1) // 只获取1个文档
+			.query(DEFAULT)
+			.filterExpression(buildFilterExpressionString(metadata))
+			.topK(1)
 			.similarityThreshold(0.0)
 			.build());
 		return !docs.isEmpty();

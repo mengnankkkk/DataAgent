@@ -35,8 +35,17 @@ interface SemanticModel {
 
 interface SemanticModelAddDto {
   agentId: number;
+  datasourceId: number;
   tableName: string;
   columnName: string;
+  businessName: string;
+  synonyms: string;
+  businessDescription: string;
+  columnComment: string;
+  dataType: string;
+}
+
+interface SemanticModelUpdateDto {
   businessName: string;
   synonyms: string;
   businessDescription: string;
@@ -56,6 +65,7 @@ interface SemanticModelImportItem {
 
 interface SemanticModelBatchImportDTO {
   agentId: number;
+  datasourceId: number;
   items: SemanticModelImportItem[];
 }
 
@@ -67,6 +77,22 @@ interface BatchImportResult {
 }
 
 const API_BASE_URL = '/api/semantic-model';
+
+const extractApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (axios.isAxiosError(error)) {
+    const responseMessage = error.response?.data?.message;
+    if (typeof responseMessage === 'string' && responseMessage.trim()) {
+      return responseMessage;
+    }
+    if (typeof error.message === 'string' && error.message.trim()) {
+      return error.message;
+    }
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+};
 
 class SemanticModelService {
   /**
@@ -104,8 +130,15 @@ class SemanticModelService {
    * @param model 语义模型 DTO 对象
    */
   async create(model: SemanticModelAddDto): Promise<boolean> {
-    const response = await axios.post<ApiResponse>(API_BASE_URL, model);
-    return response.data.success;
+    try {
+      const response = await axios.post<ApiResponse>(API_BASE_URL, model);
+      if (response.data.success) {
+        return true;
+      }
+      throw new Error(response.data.message || '创建失败');
+    } catch (error) {
+      throw new Error(extractApiErrorMessage(error, '创建失败'));
+    }
   }
 
   /**
@@ -113,15 +146,18 @@ class SemanticModelService {
    * @param id 语义模型 ID
    * @param model 语义模型对象
    */
-  async update(id: number, model: SemanticModel): Promise<boolean> {
+  async update(id: number, model: SemanticModelUpdateDto): Promise<boolean> {
     try {
       const response = await axios.put<ApiResponse>(`${API_BASE_URL}/${id}`, model);
-      return response.data.success;
+      if (response.data.success) {
+        return true;
+      }
+      throw new Error(response.data.message || '更新失败');
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return false;
       }
-      throw error;
+      throw new Error(extractApiErrorMessage(error, '更新失败'));
     }
   }
 
@@ -175,11 +211,18 @@ class SemanticModelService {
    * @param dto 批量导入DTO
    */
   async batchImport(dto: SemanticModelBatchImportDTO): Promise<BatchImportResult> {
-    const response = await axios.post<ApiResponse<BatchImportResult>>(
-      `${API_BASE_URL}/batch-import`,
-      dto,
-    );
-    return response.data.data || { total: 0, successCount: 0, failCount: 0, errors: [] };
+    try {
+      const response = await axios.post<ApiResponse<BatchImportResult>>(
+        `${API_BASE_URL}/batch-import`,
+        dto,
+      );
+      if (response.data.success) {
+        return response.data.data || { total: 0, successCount: 0, failCount: 0, errors: [] };
+      }
+      throw new Error(response.data.message || '批量导入失败');
+    } catch (error) {
+      throw new Error(extractApiErrorMessage(error, '批量导入失败'));
+    }
   }
 
   /**
@@ -187,21 +230,29 @@ class SemanticModelService {
    * @param file Excel文件
    * @param agentId 智能体ID
    */
-  async importExcel(file: File, agentId: number): Promise<BatchImportResult> {
+  async importExcel(file: File, agentId: number, datasourceId: number): Promise<BatchImportResult> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('agentId', agentId.toString());
+    formData.append('datasourceId', datasourceId.toString());
 
-    const response = await axios.post<ApiResponse<BatchImportResult>>(
-      `${API_BASE_URL}/import/excel`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+    try {
+      const response = await axios.post<ApiResponse<BatchImportResult>>(
+        `${API_BASE_URL}/import/excel`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      },
-    );
-    return response.data.data || { total: 0, successCount: 0, failCount: 0, errors: [] };
+      );
+      if (response.data.success) {
+        return response.data.data || { total: 0, successCount: 0, failCount: 0, errors: [] };
+      }
+      throw new Error(response.data.message || 'Excel导入失败');
+    } catch (error) {
+      throw new Error(extractApiErrorMessage(error, 'Excel导入失败'));
+    }
   }
 
   /**
@@ -228,6 +279,7 @@ export default new SemanticModelService();
 export type {
   SemanticModel,
   SemanticModelAddDto,
+  SemanticModelUpdateDto,
   SemanticModelImportItem,
   SemanticModelBatchImportDTO,
   BatchImportResult,

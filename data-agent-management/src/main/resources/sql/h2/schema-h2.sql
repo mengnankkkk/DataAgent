@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS semantic_model (
   created_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
+  UNIQUE KEY uk_semantic_model_agent_datasource_table_column (agent_id, datasource_id, table_name, column_name),
   INDEX idx_semantic_model_agent_id (agent_id),
   INDEX idx_semantic_model_business_name (business_name),
   INDEX idx_semantic_model_status (status),

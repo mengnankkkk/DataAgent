@@ -19,7 +19,9 @@ import com.alibaba.cloud.ai.dataagent.entity.ChatSession;
 import com.alibaba.cloud.ai.dataagent.mapper.ChatSessionMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,6 +45,16 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 	@Override
 	public ChatSession findBySessionId(String sessionId) {
 		return chatSessionMapper.selectBySessionId(sessionId);
+	}
+
+	@Override
+	public ChatSession requireSessionForAgent(String sessionId, Long agentId) {
+		ChatSession session = chatSessionMapper.selectBySessionId(sessionId);
+		if (session == null || agentId == null || session.getAgentId() == null
+				|| !agentId.equals(session.getAgentId().longValue())) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "session not found");
+		}
+		return session;
 	}
 
 	/**
@@ -78,6 +90,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 		chatSessionMapper.updateSessionTime(sessionId, now);
 	}
 
+	@Override
+	public void updateSessionTime(String sessionId, Long agentId) {
+		requireSessionForAgent(sessionId, agentId);
+		updateSessionTime(sessionId);
+	}
+
 	/**
 	 * 置顶/取消置顶会话
 	 */
@@ -86,6 +104,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 		LocalDateTime now = LocalDateTime.now();
 		chatSessionMapper.updatePinStatus(sessionId, isPinned, now);
 		log.info("Updated pin status for session: {} to: {}", sessionId, isPinned);
+	}
+
+	@Override
+	public void pinSession(String sessionId, boolean isPinned, Long agentId) {
+		requireSessionForAgent(sessionId, agentId);
+		pinSession(sessionId, isPinned);
 	}
 
 	/**
@@ -98,6 +122,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 		log.info("Renamed session: {} to: {}", sessionId, newTitle);
 	}
 
+	@Override
+	public void renameSession(String sessionId, String newTitle, Long agentId) {
+		requireSessionForAgent(sessionId, agentId);
+		renameSession(sessionId, newTitle);
+	}
+
 	/**
 	 * Delete a single session
 	 */
@@ -106,6 +136,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 		LocalDateTime now = LocalDateTime.now();
 		chatSessionMapper.softDeleteById(sessionId, now);
 		log.info("Deleted session: {}", sessionId);
+	}
+
+	@Override
+	public void deleteSession(String sessionId, Long agentId) {
+		requireSessionForAgent(sessionId, agentId);
+		deleteSession(sessionId);
 	}
 
 }

@@ -30,11 +30,12 @@ import com.alibaba.cloud.ai.dataagent.enums.ErrorCodeEnum;
 import com.alibaba.cloud.ai.dataagent.mapper.AgentDatasourceMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.DatasourceMapper;
 import com.alibaba.cloud.ai.dataagent.mapper.LogicalRelationMapper;
+import com.alibaba.cloud.ai.dataagent.mapper.SemanticModelMapper;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.DatasourceTypeHandler;
 import com.alibaba.cloud.ai.dataagent.service.datasource.handler.registry.DatasourceTypeHandlerRegistry;
-import java.util.ArrayList;
-import java.util.HashSet;
+import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,11 +59,15 @@ public class DatasourceServiceImpl implements DatasourceService {
 
 	private final LogicalRelationMapper logicalRelationMapper;
 
+	private final SemanticModelMapper semanticModelMapper;
+
 	private final DBConnectionPoolFactory poolFactory;
 
 	private final AccessorFactory accessorFactory;
 
 	private final DatasourceTypeHandlerRegistry datasourceTypeHandlerRegistry;
+
+	private final AgentVectorStoreService agentVectorStoreService;
 
 	@Override
 	public List<Datasource> getAllDatasource() {
@@ -115,6 +120,7 @@ public class DatasourceServiceImpl implements DatasourceService {
 
 	@Override
 	public Datasource updateDatasource(Integer id, Datasource datasource) {
+		Datasource existingDatasource = datasourceMapper.selectById(id);
 		// Regenerate connection URL
 		DatasourceTypeHandler handler = datasourceTypeHandlerRegistry.getRequired(datasource.getType());
 		String connectionUrl = handler.resolveConnectionUrl(datasource);
@@ -131,6 +137,7 @@ public class DatasourceServiceImpl implements DatasourceService {
 			datasource.setUsername("");
 		}
 
+		evictDatasourcePool(existingDatasource);
 		datasourceMapper.updateById(datasource);
 		return datasource;
 	}
@@ -138,8 +145,25 @@ public class DatasourceServiceImpl implements DatasourceService {
 	@Override
 	@Transactional
 	public void deleteDatasource(Integer id) {
+		Datasource datasource = datasourceMapper.selectById(id);
+		List<AgentDatasource> agentDatasources = agentDatasourceMapper.selectByDatasourceId(id);
+		for (AgentDatasource agentDatasource : agentDatasources) {
+			if (agentDatasource == null || agentDatasource.getAgentId() == null) {
+				continue;
+			}
+			if (agentDatasource.getIsActive() != null && agentDatasource.getIsActive() == 1) {
+				int activeCount = agentDatasourceMapper.countActiveByAgentId(agentDatasource.getAgentId());
+				if (activeCount <= 1) {
+					throw new RuntimeException("当前智能体必须至少保留一个启用中的数据源");
+				}
+			}
+			agentVectorStoreService.deleteSchemaDocuments(String.valueOf(agentDatasource.getAgentId()),
+					String.valueOf(id));
+		}
+		evictDatasourcePool(datasource);
 		// First, delete the associations
 		agentDatasourceMapper.deleteAllByDatasourceId(id);
+		semanticModelMapper.deleteByDatasourceId(id);
 
 		// Then, delete the data source
 		datasourceMapper.deleteById(id);
@@ -196,6 +220,22 @@ public class DatasourceServiceImpl implements DatasourceService {
 		ErrorCodeEnum result = pool.ping(config);
 		return result == ErrorCodeEnum.SUCCESS;
 
+	}
+
+	private void evictDatasourcePool(Datasource datasource) {
+		if (datasource == null || datasource.getType() == null) {
+			return;
+		}
+		DBConnectionPool pool = poolFactory.getPoolByType(datasource.getType());
+		if (pool == null) {
+			return;
+		}
+		try {
+			pool.evict(getDbConfig(datasource));
+		}
+		catch (Exception e) {
+			log.warn("Failed to evict datasource pool for datasourceId={}: {}", datasource.getId(), e.getMessage());
+		}
 	}
 
 	@Override
@@ -304,15 +344,8 @@ public class DatasourceServiceImpl implements DatasourceService {
 
 		// 设置数据源ID
 		logicalRelation.setDatasourceId(datasourceId);
-
-		// 检查是否已存在相同的外键关系
-		int exists = logicalRelationMapper.checkExists(datasourceId, logicalRelation.getSourceTableName(),
-				logicalRelation.getSourceColumnName(), logicalRelation.getTargetTableName(),
-				logicalRelation.getTargetColumnName());
-
-		if (exists > 0) {
-			throw new RuntimeException("该逻辑外键关系已存在");
-		}
+		validateNoDuplicateLogicalRelation(datasourceId, logicalRelation, null);
+		purgeDeletedDuplicateRelations(datasourceId, logicalRelation);
 
 		// 插入外键
 		logicalRelationMapper.insert(logicalRelation);
@@ -327,7 +360,8 @@ public class DatasourceServiceImpl implements DatasourceService {
 		log.info("Updating logical relation: {} for datasource: {}", logicalRelationId, datasourceId);
 
 		// 验证外键是否存在且属于该数据源
-		LogicalRelation existingRelation = logicalRelationMapper.selectById(logicalRelationId);
+		LogicalRelation existingRelation = logicalRelationMapper.selectByIdAndDatasourceId(logicalRelationId,
+				datasourceId);
 		if (existingRelation == null) {
 			throw new RuntimeException("逻辑外键不存在，ID: " + logicalRelationId);
 		}
@@ -339,9 +373,11 @@ public class DatasourceServiceImpl implements DatasourceService {
 		// 设置ID和数据源ID
 		logicalRelation.setId(logicalRelationId);
 		logicalRelation.setDatasourceId(datasourceId);
+		validateNoDuplicateLogicalRelation(datasourceId, logicalRelation, logicalRelationId);
+		purgeDeletedDuplicateRelations(datasourceId, logicalRelation);
 
 		// 更新外键
-		int updated = logicalRelationMapper.updateById(logicalRelation);
+		int updated = logicalRelationMapper.updateByIdAndDatasourceId(datasourceId, logicalRelation);
 		if (updated == 0) {
 			throw new RuntimeException("更新逻辑外键失败");
 		}
@@ -349,7 +385,7 @@ public class DatasourceServiceImpl implements DatasourceService {
 		log.info("Logical relation updated successfully: {}", logicalRelationId);
 
 		// 返回更新后的数据
-		return logicalRelationMapper.selectById(logicalRelationId);
+		return logicalRelationMapper.selectByIdAndDatasourceId(logicalRelationId, datasourceId);
 	}
 
 	@Override
@@ -357,7 +393,8 @@ public class DatasourceServiceImpl implements DatasourceService {
 		log.info("Deleting logical relation: {} for datasource: {}", logicalRelationId, datasourceId);
 
 		// 验证外键是否属于该数据源
-		LogicalRelation logicalRelation = logicalRelationMapper.selectById(logicalRelationId);
+		LogicalRelation logicalRelation = logicalRelationMapper.selectByIdAndDatasourceId(logicalRelationId,
+				datasourceId);
 		if (logicalRelation == null) {
 			throw new RuntimeException("逻辑外键不存在，ID: " + logicalRelationId);
 		}
@@ -367,7 +404,7 @@ public class DatasourceServiceImpl implements DatasourceService {
 		}
 
 		// 删除外键（逻辑删除）
-		int deleted = logicalRelationMapper.deleteById(logicalRelationId);
+		int deleted = logicalRelationMapper.deleteByIdAndDatasourceId(logicalRelationId, datasourceId);
 		if (deleted == 0) {
 			throw new RuntimeException("删除逻辑外键失败");
 		}
@@ -391,11 +428,26 @@ public class DatasourceServiceImpl implements DatasourceService {
 			.filter(Objects::nonNull)
 			.collect(Collectors.toSet());
 
+		for (LogicalRelation logicalRelation : logicalRelations) {
+			if (logicalRelation.getId() != null && !existingMap.containsKey(logicalRelation.getId())) {
+				throw new RuntimeException("批量保存包含不存在或不属于当前数据源的逻辑外键ID: " + logicalRelation.getId());
+			}
+		}
+
+		Map<String, LogicalRelation> uniqueRelationsByKey = new LinkedHashMap<>();
+		for (LogicalRelation logicalRelation : logicalRelations) {
+			String relationKey = buildLogicalRelationKey(logicalRelation);
+			LogicalRelation previous = uniqueRelationsByKey.putIfAbsent(relationKey, logicalRelation);
+			if (previous != null) {
+				throw new RuntimeException("批量保存包含重复的逻辑外键关系: " + relationKey);
+			}
+		}
+
 		// 删除那些不在传入列表中的外键
 		int deletedCount = 0;
 		for (LogicalRelation existing : existingRelations) {
 			if (!incomingIds.contains(existing.getId())) {
-				logicalRelationMapper.deleteById(existing.getId());
+				logicalRelationMapper.deleteByIdAndDatasourceId(existing.getId(), datasourceId);
 				deletedCount++;
 				log.info("Deleted logical relation: {} -> {}", existing.getSourceTableName(),
 						existing.getTargetTableName());
@@ -403,38 +455,17 @@ public class DatasourceServiceImpl implements DatasourceService {
 		}
 		log.info("Deleted {} logical relations for datasource: {}", deletedCount, datasourceId);
 
-		// 去重检查
-		List<LogicalRelation> uniqueRelations = new ArrayList<>();
-		Set<String> seen = new HashSet<>();
-
-		for (LogicalRelation logicalRelation : logicalRelations) {
-			String key = logicalRelation.getSourceTableName() + "|" + logicalRelation.getSourceColumnName() + "|"
-					+ logicalRelation.getTargetTableName() + "|" + logicalRelation.getTargetColumnName();
-
-			if (!seen.contains(key)) {
-				seen.add(key);
-				uniqueRelations.add(logicalRelation);
-			}
-			else {
-				log.warn("跳过重复的逻辑外键: {} -> {}", logicalRelation.getSourceTableName(),
-						logicalRelation.getTargetTableName());
-			}
-		}
-
-		int duplicateCount = logicalRelations.size() - uniqueRelations.size();
-		if (duplicateCount > 0) {
-			log.warn("检测到并去重了 {} 条重复的逻辑外键", duplicateCount);
-		}
-
 		// 插入或更新去重后的外键列表
 		int insertedCount = 0;
 		int updatedCount = 0;
-		for (LogicalRelation logicalRelation : uniqueRelations) {
+		for (LogicalRelation logicalRelation : uniqueRelationsByKey.values()) {
 			logicalRelation.setDatasourceId(datasourceId);
+			validateNoDuplicateLogicalRelation(datasourceId, logicalRelation, logicalRelation.getId());
+			purgeDeletedDuplicateRelations(datasourceId, logicalRelation);
 
 			if (logicalRelation.getId() != null && existingMap.containsKey(logicalRelation.getId())) {
 				// 更新现有记录
-				logicalRelationMapper.updateById(logicalRelation);
+				logicalRelationMapper.updateByIdAndDatasourceId(datasourceId, logicalRelation);
 				updatedCount++;
 				log.debug("Updated logical relation: {} -> {}", logicalRelation.getSourceTableName(),
 						logicalRelation.getTargetTableName());
@@ -453,6 +484,34 @@ public class DatasourceServiceImpl implements DatasourceService {
 				insertedCount, updatedCount, deletedCount);
 
 		return logicalRelationMapper.selectByDatasourceId(datasourceId);
+	}
+
+	private void validateNoDuplicateLogicalRelation(Integer datasourceId, LogicalRelation logicalRelation,
+			Integer excludeId) {
+		int exists = excludeId == null
+				? logicalRelationMapper.checkExists(datasourceId, logicalRelation.getSourceTableName(),
+						logicalRelation.getSourceColumnName(), logicalRelation.getTargetTableName(),
+						logicalRelation.getTargetColumnName())
+				: logicalRelationMapper.checkExistsExcludingId(datasourceId, logicalRelation.getSourceTableName(),
+						logicalRelation.getSourceColumnName(), logicalRelation.getTargetTableName(),
+						logicalRelation.getTargetColumnName(), excludeId);
+		if (exists > 0) {
+			throw new RuntimeException("该逻辑外键关系已存在");
+		}
+	}
+
+	private void purgeDeletedDuplicateRelations(Integer datasourceId, LogicalRelation logicalRelation) {
+		List<LogicalRelation> deletedRelations = logicalRelationMapper.selectDeletedByBusinessKey(datasourceId,
+				logicalRelation.getSourceTableName(), logicalRelation.getSourceColumnName(),
+				logicalRelation.getTargetTableName(), logicalRelation.getTargetColumnName());
+		for (LogicalRelation deletedRelation : deletedRelations) {
+			logicalRelationMapper.hardDeleteByIdAndDatasourceId(deletedRelation.getId(), datasourceId);
+		}
+	}
+
+	private String buildLogicalRelationKey(LogicalRelation logicalRelation) {
+		return logicalRelation.getSourceTableName() + "|" + logicalRelation.getSourceColumnName() + "|"
+				+ logicalRelation.getTargetTableName() + "|" + logicalRelation.getTargetColumnName();
 	}
 
 }

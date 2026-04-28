@@ -980,9 +980,41 @@
 
       const agentId = computed(() => route.params.id as string);
 
+      const parseAgentId = (value: unknown): number | null => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          return value;
+        }
+        if (typeof value === 'string' && value.trim()) {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+      };
+
+      const getRouteAgentId = (): number | null => {
+        const rawAgentId = route.params.id;
+        return parseAgentId(Array.isArray(rawAgentId) ? rawAgentId[0] : rawAgentId);
+      };
+
+      const getResolvedAgentId = (): number | null =>
+        parseAgentId(currentSession.value?.agentId) ?? parseAgentId(agent.value?.id) ?? getRouteAgentId();
+
+      const requireResolvedAgentId = (): number => {
+        const resolvedAgentId = getResolvedAgentId();
+        if (resolvedAgentId === null) {
+          throw new Error('智能体ID无效，请刷新后重试');
+        }
+        return resolvedAgentId;
+      };
+
       const loadAgent = async () => {
         try {
-          const agentData = await AgentService.get(parseInt(agentId.value));
+          const routeAgentId = getRouteAgentId();
+          if (routeAgentId === null) {
+            ElMessage.error('智能体ID无效，请刷新后重试');
+            return;
+          }
+          const agentData = await AgentService.get(routeAgentId);
           if (agentData) {
             agent.value = agentData;
           } else {
@@ -1030,7 +1062,10 @@
             answerExplainVisible,
             pendingClarify,
           });
-          currentMessages.value = await ChatService.getSessionMessages(session.id);
+          currentMessages.value = await ChatService.getSessionMessages(
+            session.id,
+            requireResolvedAgentId(),
+          );
           scrollToBottom();
         } catch (error) {
           ElMessage.error('加载消息失败');
@@ -1090,12 +1125,16 @@
         };
         try {
           // 保存用户消息
-          const savedMessage = await ChatService.saveMessage(currentSession.value.id, userMessage);
+          const savedMessage = await ChatService.saveMessage(
+            currentSession.value.id,
+            requireResolvedAgentId(),
+            userMessage,
+          );
           currentMessages.value.push(savedMessage);
           getSessionState(currentSession.value.id);
 
           const request: GraphRequest = {
-            agentId: agentId.value,
+            agentId: String(requireResolvedAgentId()),
             query: requestQuery,
             humanFeedback: Boolean(activeClarify),
             humanFeedbackContent: feedbackContent,
@@ -1165,7 +1204,7 @@
                 messageType: 'result-set',
                 metadata: metadataJson,
               };
-              await ChatService.saveMessage(sessionId, aiMessage);
+              await ChatService.saveMessage(sessionId, requireResolvedAgentId(), aiMessage);
               return;
             }
           } catch (error) {
@@ -1181,7 +1220,7 @@
           messageType: 'html',
           metadata: metadataJson,
         };
-        await ChatService.saveMessage(sessionId, aiMessage);
+        await ChatService.saveMessage(sessionId, requireResolvedAgentId(), aiMessage);
       };
 
       const sendGraphRequest = async (request: GraphRequest) => {
@@ -1394,7 +1433,7 @@
                     messageType: 'html-report',
                   };
 
-                  await ChatService.saveMessage(sessionId, htmlReportMessage)
+                  await ChatService.saveMessage(sessionId, requireResolvedAgentId(), htmlReportMessage)
                     .then(savedMessage => {
                       if (currentSession.value?.id === sessionId) {
                         currentMessages.value.push(savedMessage);
@@ -1419,7 +1458,7 @@
                     messageType: 'markdown-report',
                   };
 
-                  await ChatService.saveMessage(sessionId, markdownMessage)
+                  await ChatService.saveMessage(sessionId, requireResolvedAgentId(), markdownMessage)
                     .then(savedMessage => {
                       if (currentSession.value?.id === sessionId) {
                         currentMessages.value.push(savedMessage);
@@ -1501,7 +1540,11 @@
           return;
         }
         try {
-          await ChatService.downloadHtmlReport(currentSession.value.id, content);
+          await ChatService.downloadHtmlReport(
+            currentSession.value.id,
+            requireResolvedAgentId(),
+            content,
+          );
           ElMessage.success('HTML报告下载成功');
         } catch (error) {
           console.error('下载HTML报告失败:', error);
@@ -1764,6 +1807,7 @@
           answerExplain.value = await ChatService.getAnswerExplain(
             currentSession.value.id,
             runtimeRequestId,
+            requireResolvedAgentId(),
           );
           // 保存到会话状态（包括 sessionStorage）
           saveViewToState(currentSession.value.id, {
@@ -2135,7 +2179,10 @@
         traceLoading.value = true;
         traceError.value = '';
         try {
-          sessionTrace.value = await ChatService.getSessionTrace(currentSession.value.id);
+          sessionTrace.value = await ChatService.getSessionTrace(
+            currentSession.value.id,
+            requireResolvedAgentId(),
+          );
           selectedTraceSpanId.value = sessionTrace.value.rootSpans?.[0]?.spanId ?? '';
         } catch (error: any) {
           sessionTrace.value = null;
@@ -2178,7 +2225,7 @@
         // 如果没有会话，先创建新会话
         if (!currentSession.value) {
           try {
-            const newSession = await ChatService.createSession(parseInt(agentId.value), '新会话');
+            const newSession = await ChatService.createSession(requireResolvedAgentId(), '新会话');
             currentSession.value = newSession;
             ElMessage.success('新会话创建成功');
           } catch (error) {

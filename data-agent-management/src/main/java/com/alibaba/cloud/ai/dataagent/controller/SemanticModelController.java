@@ -17,7 +17,9 @@ package com.alibaba.cloud.ai.dataagent.controller;
 
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelAddDTO;
 import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelBatchImportDTO;
+import com.alibaba.cloud.ai.dataagent.dto.schema.SemanticModelUpdateDTO;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
+import com.alibaba.cloud.ai.dataagent.exception.InvalidInputException;
 import com.alibaba.cloud.ai.dataagent.service.semantic.SemanticModelService;
 import com.alibaba.cloud.ai.dataagent.vo.ApiResponse;
 import com.alibaba.cloud.ai.dataagent.vo.BatchImportResult;
@@ -83,23 +85,26 @@ public class SemanticModelController {
 
 	@PostMapping
 	public ApiResponse<Boolean> create(@RequestBody @Validated SemanticModelAddDTO semanticModelAddDto) {
-		boolean success = semanticModelService.addSemanticModel(semanticModelAddDto);
-		if (success) {
-			return ApiResponse.success("Semantic model created successfully", true);
-		}
-		else {
+		try {
+			boolean success = semanticModelService.addSemanticModel(semanticModelAddDto);
+			if (success) {
+				return ApiResponse.success("Semantic model created successfully", true);
+			}
 			return ApiResponse.error("Failed to create semantic model");
+		}
+		catch (IllegalArgumentException e) {
+			throw new InvalidInputException(e.getMessage());
 		}
 	}
 
 	@PutMapping("/{id}")
-	public ApiResponse<SemanticModel> update(@PathVariable(value = "id") Long id, @RequestBody SemanticModel model) {
+	public ApiResponse<SemanticModel> update(@PathVariable(value = "id") Long id,
+			@RequestBody @Validated SemanticModelUpdateDTO semanticModelUpdateDto) {
 		if (semanticModelService.getById(id) == null) {
 			return ApiResponse.error("Semantic model not found");
 		}
-		model.setId(id);
-		semanticModelService.updateSemanticModel(id, model);
-		return ApiResponse.success("Semantic model updated successfully", model);
+		semanticModelService.updateSemanticModel(id, semanticModelUpdateDto);
+		return ApiResponse.success("Semantic model updated successfully", semanticModelService.getById(id));
 	}
 
 	@DeleteMapping("/{id}")
@@ -172,8 +177,9 @@ public class SemanticModelController {
 
 	@PostMapping(value = "/import/excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public Mono<ApiResponse<BatchImportResult>> importExcel(@RequestPart("file") FilePart file,
-			@RequestPart("agentId") String agentId) {
+			@RequestPart("agentId") String agentId, @RequestPart("datasourceId") String datasourceId) {
 		Long agentIdLong = Long.parseLong(agentId);
+		Integer datasourceIdInt = Integer.parseInt(datasourceId);
 		String filename = file.filename();
 
 		return DataBufferUtils.join(file.content()).flatMap(dataBuffer -> {
@@ -183,7 +189,8 @@ public class SemanticModelController {
 
 			return Mono.fromCallable(() -> {
 				try (InputStream inputStream = new ByteArrayInputStream(bytes)) {
-					BatchImportResult result = semanticModelService.importFromExcel(inputStream, filename, agentIdLong);
+					BatchImportResult result = semanticModelService.importFromExcel(inputStream, filename, agentIdLong,
+							datasourceIdInt);
 					return ApiResponse.success("Excel导入完成", result);
 				}
 			}).subscribeOn(Schedulers.boundedElastic());
