@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 the original author or authors.
+ * Copyright 2024-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,31 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.cloud.ai.dataagent.agentscope.tool.sqlguard;
+package com.alibaba.cloud.ai.dataagent.agentscope.tool;
 
-import java.util.List;
-import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
+public enum ToolErrorCode {
 
-@Data
-class SqlGuardCheckRequest {
+	INVALID_INPUT,
 
-	private String action;
+	UNSUPPORTED_ACTION,
 
-	private String query;
+	DATASOURCE_UNAVAILABLE,
 
-	private String sql;
+	TABLE_NOT_VISIBLE,
 
-	private String humanFeedbackContent;
+	COLUMN_NOT_VISIBLE,
 
-	private String tableName;
-
-	private List<String> columnNames;
-
-	private Integer limit;
-
-	String normalizedAction() {
-		return StringUtils.defaultIfBlank(action, "SQL_VERIFY").trim().toUpperCase();
-	}
+	EXECUTION_FAILED
 
 }

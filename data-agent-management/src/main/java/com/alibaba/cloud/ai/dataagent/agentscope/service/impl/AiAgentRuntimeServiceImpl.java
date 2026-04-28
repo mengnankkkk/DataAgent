@@ -337,10 +337,6 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 				if (StringUtils.hasText(summary.getDatasource())) {
 					rootSpan.setAttribute("dataagent.answer.explain.datasource", summary.getDatasource());
 				}
-				if (summary.getUsedTables() != null && !summary.getUsedTables().isEmpty()) {
-					rootSpan.setAttribute("dataagent.answer.explain.used_tables",
-							String.join(",", summary.getUsedTables()));
-				}
 			});
 	}
 

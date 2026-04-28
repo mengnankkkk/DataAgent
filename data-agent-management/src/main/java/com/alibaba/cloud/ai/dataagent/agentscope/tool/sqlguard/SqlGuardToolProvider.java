@@ -18,6 +18,8 @@ package com.alibaba.cloud.ai.dataagent.agentscope.tool.sqlguard;
 import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.AgentScopedToolProvider;
+import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
+import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.springframework.ai.chat.model.ToolContext;
@@ -38,7 +40,7 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			    "action": {
 			      "type": "string",
 			      "enum": ["SQL_VERIFY", "DATA_PROFILE"],
-			      "description": "可选。默认 SQL_VERIFY。SQL_VERIFY 用于校验候选 SQL 是否真正符合用户意图；DATA_PROFILE 仅用于在少量关键候选字段语义仍不明确，且这种不确定性会影响过滤、分组、排序、时间窗口或指标写法时，补充查看字段值分布。"
+			      "description": "可选。默认 SQL_VERIFY。"
 			    },
 			    "query": {
 			      "type": "string",
@@ -46,7 +48,7 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			    },
 			    "sql": {
 			      "type": "string",
-			      "description": "SQL_VERIFY 时必填。当前准备执行或准备返回给用户的候选 SQL。"
+			      "description": "SQL_VERIFY 时必填。待校验 SQL。"
 			    },
 			    "tableName": {
 			      "type": "string",
@@ -57,23 +59,11 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			      "items": {
 			        "type": "string"
 			      },
-			      "description": "DATA_PROFILE 时可选。优先只传需要诊断的少量关键字段；不传时默认取该表前几个可见字段。"
+			      "description": "DATA_PROFILE 时可选。优先只传少量关键字段。"
 			    },
 			    "limit": {
 			      "type": "integer",
-			      "description": "DATA_PROFILE 时可选。样例值和高频值的返回上限，默认 5，最大 20。"
-			    },
-			    "tableSchemas": {
-			      "type": "object",
-			      "description": "可选。把 datasource explorer 的 schema 结果原样传入，帮助 SQL 校验识别时间列、维度列与表关系。"
-			    },
-			    "semanticHits": {
-			      "type": "object",
-			      "description": "可选。把 semantic_model.search 的结果原样传入。"
-			    },
-			    "businessKnowledgeHits": {
-			      "type": "object",
-			      "description": "可选。把 domain_business_knowledge.search 的结果原样传入。"
+			      "description": "DATA_PROFILE 时可选。返回上限，默认 5，最大 20。"
 			    }
 			  }
 			}
@@ -87,7 +77,6 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			4. 使用 DATA_PROFILE 时，优先传少量关键 `columnNames`，不要对整张表做无差别 profile。
 			5. 如果 SQL_VERIFY 返回 `isAligned=false`，请读取 `problems`、`ruleChecks` 和 `fixSuggestions`，自行改写 SQL 后再次调用 `sql_guard.check`。
 			6. 如果使用 DATA_PROFILE，请重点读取返回的 `columnProfiles`，理解空值率、去重计数、高频值、样例值，以及字段更像枚举、数值还是时间字段。
-			7. 每次调用都要传当前动作需要的最新顶层参数，不要把上一轮 `sql_guard.check` 的输出对象原样回传给工具。
 			""";
 
 	private final ObjectMapper objectMapper;
@@ -149,15 +138,36 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 						? objectMapper.readValue(toolInput, SqlGuardCheckRequest.class) : new SqlGuardCheckRequest();
 				enrichRequestFromToolContext(request, toolContext);
 				String action = request.normalizedAction();
+				validateRequest(request, action);
 				SqlGuardCheckResult result = switch (action) {
 					case "DATA_PROFILE" -> sqlVerifyExplainService.inspectProfile(agentId, request);
 					case "SQL_VERIFY" -> sqlVerifyExplainService.explain(request);
-					default -> throw new IllegalArgumentException("不支持的 sql_guard.check 动作：" + action);
+					default -> throw new IllegalArgumentException(objectToJson(
+							ToolError.of(ToolErrorCode.UNSUPPORTED_ACTION, "不支持的 sql_guard.check 动作：" + action)));
 				};
 				return objectMapper.writeValueAsString(result);
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("sql_guard.check 执行失败：" + ex.getMessage(), ex);
+				throw new IllegalStateException(
+						objectToJson(ToolError.of(ToolErrorCode.EXECUTION_FAILED, "sql_guard.check 执行失败：" + ex.getMessage())),
+						ex);
+			}
+		}
+
+		private void validateRequest(SqlGuardCheckRequest request, String action) {
+			if ("DATA_PROFILE".equals(action)) {
+				requireText(request.getTableName(), "DATA_PROFILE 需要 tableName 参数");
+				return;
+			}
+			if ("SQL_VERIFY".equals(action)) {
+				requireText(request.getQuery(), "SQL_VERIFY 需要 query 参数");
+				requireText(request.getSql(), "SQL_VERIFY 需要 sql 参数");
+			}
+		}
+
+		private void requireText(String value, String message) {
+			if (!StringUtils.hasText(value)) {
+				throw new IllegalArgumentException(objectToJson(ToolError.of(ToolErrorCode.INVALID_INPUT, message)));
 			}
 		}
 
@@ -170,6 +180,15 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 				return;
 			}
 			request.setHumanFeedbackContent(graphRequest.getHumanFeedbackContent());
+		}
+
+		private String objectToJson(Object value) {
+			try {
+				return objectMapper.writeValueAsString(value);
+			}
+			catch (Exception ex) {
+				return "{\"code\":\"EXECUTION_FAILED\",\"message\":\"工具错误序列化失败\"}";
+			}
 		}
 
 	}

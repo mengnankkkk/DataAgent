@@ -17,6 +17,8 @@ package com.alibaba.cloud.ai.dataagent.agentscope.tool.knowledge;
 
 import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
+import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
+import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolErrorCode;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.DomainKnowledgeSearchRequest;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -110,6 +112,7 @@ public class DomainBusinessKnowledgeToolSupport {
 				JsonNode jsonNode = StringUtils.hasText(toolInput) ? objectMapper.readTree(toolInput)
 						: objectMapper.createObjectNode();
 				String query = jsonNode.path("query").asText("");
+				validateQuery(query);
 				List<String> knowledgeTypes = new ArrayList<>();
 				JsonNode knowledgeTypesNode = jsonNode.path("knowledgeTypes");
 				if (knowledgeTypesNode.isArray()) {
@@ -122,17 +125,34 @@ public class DomainBusinessKnowledgeToolSupport {
 				Integer topK = jsonNode.has("topK") && jsonNode.get("topK").canConvertToInt()
 						? jsonNode.get("topK").asInt() : null;
 				Double similarityThreshold = jsonNode.has("similarityThreshold")
-						&& jsonNode.get("similarityThreshold").isNumber()
-								? jsonNode.get("similarityThreshold").asDouble() : null;
+						&& jsonNode.get("similarityThreshold").isNumber() ? jsonNode.get("similarityThreshold").asDouble()
+								: null;
 
 				DomainKnowledgeSearchRequest request = new DomainKnowledgeSearchRequest(query,
 						knowledgeTypes.isEmpty() ? null : List.copyOf(knowledgeTypes), topK, similarityThreshold);
 				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper
-					.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, graphRequest));
+				return objectMapper.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("领域业务知识检索失败：" + ex.getMessage(), ex);
+				throw new IllegalStateException(objectToJson(
+						ToolError.of(ToolErrorCode.EXECUTION_FAILED, "domain_business_knowledge.search 执行失败：" + ex.getMessage())),
+						ex);
+			}
+		}
+
+		private void validateQuery(String query) {
+			if (!StringUtils.hasText(query)) {
+				throw new IllegalArgumentException(objectToJson(
+						ToolError.of(ToolErrorCode.INVALID_INPUT, "domain_business_knowledge.search 需要 query 参数")));
+			}
+		}
+
+		private String objectToJson(Object value) {
+			try {
+				return objectMapper.writeValueAsString(value);
+			}
+			catch (Exception ex) {
+				return "{\"code\":\"EXECUTION_FAILED\",\"message\":\"工具错误序列化失败\"}";
 			}
 		}
 

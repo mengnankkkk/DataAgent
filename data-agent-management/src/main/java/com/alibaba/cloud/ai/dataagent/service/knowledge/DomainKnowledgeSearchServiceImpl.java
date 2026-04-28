@@ -26,7 +26,6 @@ import com.alibaba.cloud.ai.dataagent.observability.AnswerTraceExplainStore;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.DynamicFilterService;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.DomainKnowledgeSearchRequest;
-import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.SearchDiagnostics;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.DomainKnowledgeSearchResult;
 import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.KnowledgeHit;
 import java.util.ArrayList;
@@ -127,12 +126,9 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 			warnings.add("未检索到匹配的业务知识，请缩短问题或换一种业务说法重试。");
 		}
 
-		SearchDiagnostics diagnostics = new SearchDiagnostics(agentId, businessTermDiagnostics.recalledCount(),
-				businessTermDiagnostics.recalledCount(), agentKnowledgeDiagnostics.recalledCount(),
-				businessTermDiagnostics.vectorReady(), businessTermDiagnostics.vectorReady(),
-				agentKnowledgeDiagnostics.vectorReady());
-		DomainKnowledgeSearchResult result = new DomainKnowledgeSearchResult(query,
-				List.copyOf(options.appliedKnowledgeTypes()), List.copyOf(hits), List.copyOf(warnings), diagnostics);
+		String resolution = hits.isEmpty() ? "no_match" : "matched";
+		DomainKnowledgeSearchResult result = new DomainKnowledgeSearchResult(List.copyOf(hits), List.copyOf(warnings),
+				resolution);
 		if (graphRequest != null) {
 			answerTraceExplainStore.recordKnowledgeSearch(graphRequest, result);
 		}

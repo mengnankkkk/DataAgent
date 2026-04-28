@@ -17,48 +17,33 @@ package com.alibaba.cloud.ai.dataagent.agentscope.tool.sqlguard;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Builder;
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.Builder;
+import lombok.Data;
 
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class SqlGuardCheckResult {
 
-	private String action;
-
-	private String query;
-
-	private String sql;
+	private String decision;
 
 	private String tableName;
 
 	private String summary;
-
-	private String explainedIntent;
 
 	@JsonProperty("isAligned")
 	private Boolean isAligned;
 
 	private Long totalRows;
 
-	private Integer inspectedColumnCount;
-
 	@Builder.Default
 	private List<SqlGuardProblem> problems = new ArrayList<>();
 
 	@Builder.Default
 	private List<String> fixSuggestions = new ArrayList<>();
-
-	@Builder.Default
-	private List<String> usedTables = new ArrayList<>();
-
-	@Builder.Default
-	private List<String> usedMetrics = new ArrayList<>();
 
 	@Builder.Default
 	private List<SqlGuardRuleCheck> ruleChecks = new ArrayList<>();

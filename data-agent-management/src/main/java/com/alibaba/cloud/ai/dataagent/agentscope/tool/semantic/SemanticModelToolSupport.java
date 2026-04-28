@@ -17,6 +17,8 @@ package com.alibaba.cloud.ai.dataagent.agentscope.tool.semantic;
 
 import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
+import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
+import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ToolContext;
@@ -39,7 +41,7 @@ public class SemanticModelToolSupport {
 			    },
 			    "tableNames": {
 			      "type": "array",
-			      "description": "可选。将检索范围限制在这些表内；如果 datasource explorer 已能定位表结构，则不必传该工具。",
+			      "description": "可选。将检索范围限制在这些表内；如果数据源探索工具已能定位表结构，则不必传该工具。",
 			      "items": {
 			        "type": "string"
 			      }
@@ -96,12 +98,30 @@ public class SemanticModelToolSupport {
 				SemanticModelSearchRequest request = StringUtils.hasText(toolInput)
 						? objectMapper.readValue(toolInput, SemanticModelSearchRequest.class)
 						: new SemanticModelSearchRequest();
+				validateRequest(request);
 				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper
-					.writeValueAsString(semanticModelSearchService.search(agentId, request, graphRequest));
+				return objectMapper.writeValueAsString(semanticModelSearchService.search(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException("语义模型提示检索失败：" + ex.getMessage(), ex);
+				throw new IllegalStateException(
+						objectToJson(ToolError.of(ToolErrorCode.EXECUTION_FAILED, "semantic_model.search 执行失败：" + ex.getMessage())),
+						ex);
+			}
+		}
+
+		private void validateRequest(SemanticModelSearchRequest request) {
+			if (request == null || !StringUtils.hasText(request.getQuery())) {
+				throw new IllegalArgumentException(
+						objectToJson(ToolError.of(ToolErrorCode.INVALID_INPUT, "semantic_model.search 需要 query 参数")));
+			}
+		}
+
+		private String objectToJson(Object value) {
+			try {
+				return objectMapper.writeValueAsString(value);
+			}
+			catch (Exception ex) {
+				return "{\"code\":\"EXECUTION_FAILED\",\"message\":\"工具错误序列化失败\"}";
 			}
 		}
 

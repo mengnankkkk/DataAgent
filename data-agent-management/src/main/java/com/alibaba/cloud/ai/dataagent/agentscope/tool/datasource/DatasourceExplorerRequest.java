@@ -15,7 +15,6 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.tool.datasource;
 
-import java.util.List;
 import lombok.Data;
 
 @Data
@@ -26,8 +25,6 @@ public class DatasourceExplorerRequest {
 	private String query;
 
 	private String tableName;
-
-	private List<String> tableNames;
 
 	private String sql;
 

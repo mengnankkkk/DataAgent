@@ -24,7 +24,6 @@ import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchSer
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -149,7 +148,6 @@ public class AnswerTraceExplainStore {
 	public Optional<ExplainMirrorSummary> getMirrorSummary(String sessionId, String runtimeRequestId) {
 		return getExplain(sessionId, runtimeRequestId).map(explain -> ExplainMirrorSummary.builder()
 			.datasource(explain.getDatasource())
-			.usedTables(explain.getUsedTables())
 			.semanticHitCount(explain.getSemanticHits() == null ? 0 : explain.getSemanticHits().size())
 			.knowledgeHitCount(explain.getKnowledgeHits() == null ? 0 : explain.getKnowledgeHits().size())
 			.toolStepCount(explain.getToolSteps() == null ? 0 : explain.getToolSteps().size())
@@ -237,7 +235,7 @@ public class AnswerTraceExplainStore {
 			.toolName("domain_business_knowledge.search")
 			.title("业务知识检索")
 			.summary("检索到 %d 条知识命中".formatted(result.hits() == null ? 0 : result.hits().size()))
-			.detail(result.query())
+			.detail(result.resolution())
 			.timestampEpochMs(Instant.now().toEpochMilli())
 			.build());
 		if (result.hits() != null) {
@@ -270,13 +268,6 @@ public class AnswerTraceExplainStore {
 		if (StringUtils.hasText(result.getSql())) {
 			assembly.sql = result.getSql();
 		}
-		if (StringUtils.hasText(result.getSqlExplanation())) {
-			assembly.sqlExplanation = result.getSqlExplanation();
-		}
-		mergeOrdered(assembly.usedTables, result.getUsedTables());
-		mergeOrdered(assembly.usedColumns, result.getUsedColumns());
-		mergeMap(assembly.permissions, result.getPermissions());
-		mergeMap(assembly.stats, result.getStats());
 		assembly.toolSteps.add(ToolStepView.builder()
 			.toolName("datasource.explorer")
 			.title(result.getAction())
@@ -289,13 +280,13 @@ public class AnswerTraceExplainStore {
 	}
 
 	private void applyClarifyAssessment(ExplainAssembly assembly, QueryClarifyAssessment assessment) {
-		assembly.stats.put("riskLevel", assessment.riskLevel().value());
-		assembly.stats.put("clarifyRequired", assessment.clarifyRequired());
-		assembly.stats.put("missingDimensions", assessment.missingDimensions());
-		assembly.stats.put("followUpQuestions", assessment.followUpQuestions());
-		assembly.stats.put("suggestedAssumptions", assessment.suggestedAssumptions());
+		assembly.clarify.put("riskLevel", assessment.riskLevel().value());
+		assembly.clarify.put("clarifyRequired", assessment.clarifyRequired());
+		assembly.clarify.put("missingDimensions", assessment.missingDimensions());
+		assembly.clarify.put("followUpQuestions", assessment.followUpQuestions());
+		assembly.clarify.put("suggestedAssumptions", assessment.suggestedAssumptions());
 		if (StringUtils.hasText(assessment.feedbackContent())) {
-			assembly.stats.put("humanFeedbackContent", assessment.feedbackContent());
+			assembly.clarify.put("humanFeedbackContent", assessment.feedbackContent());
 		}
 		assembly.toolSteps.add(ToolStepView.builder()
 			.toolName("query_clarify.check")
@@ -308,29 +299,6 @@ public class AnswerTraceExplainStore {
 			assembly.warnings.add("riskLevel=high，已禁止直接查库，需先补充信息或明确假设。");
 		}
 		assembly.updatedAt = Instant.now().toEpochMilli();
-	}
-
-	private void mergeOrdered(Set<String> target, Collection<String> source) {
-		if (source == null) {
-			return;
-		}
-		for (String item : source) {
-			if (StringUtils.hasText(item)) {
-				target.add(item.trim());
-			}
-		}
-	}
-
-	private void mergeMap(Map<String, Object> target, Map<String, Object> source) {
-		if (source == null) {
-			return;
-		}
-		source.forEach((key, value) -> {
-			if (!StringUtils.hasText(key) || value == null) {
-				return;
-			}
-			target.put(key, value);
-		});
 	}
 
 	private void evictOverflowLocked() {
@@ -367,21 +335,13 @@ public class AnswerTraceExplainStore {
 
 		private String sql;
 
-		private String sqlExplanation;
-
 		private final List<SemanticHitView> semanticHits = new ArrayList<>();
 
 		private final List<KnowledgeHitView> knowledgeHits = new ArrayList<>();
 
 		private final List<ToolStepView> toolSteps = new ArrayList<>();
 
-		private final Set<String> usedTables = new LinkedHashSet<>();
-
-		private final Set<String> usedColumns = new LinkedHashSet<>();
-
-		private final Map<String, Object> permissions = new LinkedHashMap<>();
-
-		private final Map<String, Object> stats = new LinkedHashMap<>();
+		private final Map<String, Object> clarify = new LinkedHashMap<>();
 
 		private final Set<String> warnings = new LinkedHashSet<>();
 
@@ -396,14 +356,10 @@ public class AnswerTraceExplainStore {
 				.answer(answer)
 				.datasource(datasource)
 				.sql(sql)
-				.sqlExplanation(sqlExplanation)
 				.semanticHits(List.copyOf(semanticHits))
 				.knowledgeHits(List.copyOf(knowledgeHits))
 				.toolSteps(List.copyOf(toolSteps))
-				.usedTables(List.copyOf(usedTables))
-				.usedColumns(List.copyOf(usedColumns))
-				.permissions(new LinkedHashMap<>(permissions))
-				.stats(new LinkedHashMap<>(stats))
+				.clarify(new LinkedHashMap<>(clarify))
 				.warnings(List.copyOf(warnings))
 				.updatedAt(updatedAt)
 				.build();
@@ -430,8 +386,6 @@ public class AnswerTraceExplainStore {
 
 		private String sql;
 
-		private String sqlExplanation;
-
 		@Builder.Default
 		private List<SemanticHitView> semanticHits = List.of();
 
@@ -442,16 +396,7 @@ public class AnswerTraceExplainStore {
 		private List<ToolStepView> toolSteps = List.of();
 
 		@Builder.Default
-		private List<String> usedTables = List.of();
-
-		@Builder.Default
-		private List<String> usedColumns = List.of();
-
-		@Builder.Default
-		private Map<String, Object> permissions = Map.of();
-
-		@Builder.Default
-		private Map<String, Object> stats = Map.of();
+		private Map<String, Object> clarify = Map.of();
 
 		@Builder.Default
 		private List<String> warnings = List.of();
@@ -527,9 +472,6 @@ public class AnswerTraceExplainStore {
 	public static class ExplainMirrorSummary {
 
 		private String datasource;
-
-		@Builder.Default
-		private List<String> usedTables = List.of();
 
 		private int semanticHitCount;
 

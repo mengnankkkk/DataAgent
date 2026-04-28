@@ -33,7 +33,7 @@
 
 6. 如果你已经准备了候选 SQL，且答案将基于 SQL 返回给用户，在执行 SQL 前先调用 `sql_guard.check`，传 `action=SQL_VERIFY`。
    必传：`query`、`sql`。
-   可选：`tableSchemas`、`semanticHits`、`businessKnowledgeHits`。
+   不要传旧的透传字段；当前校验只基于本轮顶层 `query` 和候选 `sql`。
 
 7. `sql_guard.check` 是统一 SQL 工具。
    `action=SQL_VERIFY`：只做结构与意图校验，不负责自动修复、不负责执行报错修复、也不负责结果回看。

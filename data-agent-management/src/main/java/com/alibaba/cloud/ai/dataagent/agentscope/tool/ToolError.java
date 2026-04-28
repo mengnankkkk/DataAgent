@@ -13,22 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.cloud.ai.dataagent.agentscope.tool.semantic;
+package com.alibaba.cloud.ai.dataagent.agentscope.tool;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 @Builder
-public class SemanticModelSearchResult {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ToolError {
 
-	private String resolution;
+	ToolErrorCode code;
 
-	private String summary;
+	String message;
 
-	@Builder.Default
-	private List<SemanticModelSearchHit> hits = new ArrayList<>();
+	Boolean retryable;
+
+	public static ToolError of(ToolErrorCode code, String message) {
+		return ToolError.builder().code(code).message(message).build();
+	}
+
+	public static ToolError retryable(ToolErrorCode code, String message) {
+		return ToolError.builder().code(code).message(message).retryable(true).build();
+	}
 
 }

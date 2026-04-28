@@ -31,6 +31,8 @@ public class DatasourceExplorerResult {
 
 	private String summary;
 
+	private Boolean searchReady;
+
 	@Builder.Default
 	private List<Map<String, Object>> tables = new ArrayList<>();
 
@@ -44,24 +46,5 @@ public class DatasourceExplorerResult {
 	private List<Map<String, Object>> relations = new ArrayList<>();
 
 	private String sql;
-
-	private String sqlExplanation;
-
-	@Builder.Default
-	private List<String> usedTables = new ArrayList<>();
-
-	@Builder.Default
-	private List<String> usedColumns = new ArrayList<>();
-
-	@Builder.Default
-	private Map<String, Object> permissions = new java.util.LinkedHashMap<>();
-
-	@Builder.Default
-	private Map<String, Object> stats = new java.util.LinkedHashMap<>();
-
-	@Builder.Default
-	private List<String> nextSuggestedActions = new ArrayList<>();
-
-	private boolean truncated;
 
 }

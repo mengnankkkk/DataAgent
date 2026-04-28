@@ -30,17 +30,11 @@ public interface DomainKnowledgeSearchService {
 			Double similarityThreshold) {
 	}
 
-	record DomainKnowledgeSearchResult(String query, List<String> appliedKnowledgeTypes, List<KnowledgeHit> hits,
-			List<String> warnings, SearchDiagnostics diagnostics) {
+	record DomainKnowledgeSearchResult(List<KnowledgeHit> hits, List<String> warnings, String resolution) {
 	}
 
 	record KnowledgeHit(String vectorType, String knowledgeId, String title, String summary, String snippet,
 			String source, String concreteType) {
-	}
-
-	record SearchDiagnostics(String runtimeAgentId, Integer recalledBusinessKnowledgeCount,
-			Integer recalledBusinessTermCount, Integer recalledAgentKnowledgeCount,
-			boolean businessKnowledgeVectorReady, boolean businessTermVectorReady, boolean agentKnowledgeVectorReady) {
 	}
 
 }

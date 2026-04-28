@@ -26,7 +26,6 @@ import com.alibaba.cloud.ai.dataagent.entity.Datasource;
 import com.alibaba.cloud.ai.dataagent.service.datasource.AgentDatasourceService;
 import com.alibaba.cloud.ai.dataagent.service.datasource.DatasourceService;
 import com.alibaba.cloud.ai.dataagent.util.SqlUtil;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -138,12 +137,9 @@ public class SqlVerifyExplainService {
 		}
 		catch (IllegalArgumentException ex) {
 			return SqlGuardCheckResult.builder()
-				.action(ACTION_SQL_VERIFY)
-				.query(query)
-				.sql(sql)
+				.decision("revise_sql")
 				.isAligned(false)
 				.summary("SQL 无法通过语法解析，无法继续做结构和意图一致性校验。")
-				.explainedIntent(buildIntentExplanation(intent))
 				.problems(List.of(SqlGuardProblem.builder()
 					.code("SQL_PARSE_ERROR")
 					.title("SQL 语法解析失败")
@@ -189,16 +185,11 @@ public class SqlVerifyExplainService {
 			fixSuggestions.add("当前规则校验通过；如要进一步提高置信度，可继续核对执行结果与最终答案解释。");
 		}
 		return SqlGuardCheckResult.builder()
-			.action(ACTION_SQL_VERIFY)
-			.query(query)
-			.sql(sql)
+			.decision(aligned ? "safe_to_execute" : "revise_sql")
 			.isAligned(aligned)
 			.summary(summary)
-			.explainedIntent(buildIntentExplanation(intent))
 			.problems(problems)
 			.fixSuggestions(List.copyOf(fixSuggestions))
-			.usedTables(shape.usedTables())
-			.usedMetrics(shape.usedMetrics())
 			.ruleChecks(ruleChecks)
 			.build();
 	}
@@ -226,13 +217,10 @@ public class SqlVerifyExplainService {
 		String summary = "仅基于可见字段对表 '%s' 的 %d 个字段完成 profile 分析。".formatted(columnProfiles.size(),
 				actualTableName);
 		return SqlGuardCheckResult.builder()
-			.action(ACTION_DATA_PROFILE)
-			.query(request == null ? null : request.getQuery())
+			.decision("inspect_columns")
 			.tableName(actualTableName)
 			.summary(summary)
 			.totalRows(totalRows)
-			.inspectedColumnCount(columnProfiles.size())
-			.usedTables(List.of(actualTableName))
 			.columnProfiles(columnProfiles)
 			.fixSuggestions(
 					List.of("可优先把高频值集中的分类字段用作过滤条件或 GROUP BY 候选字段。",
@@ -1110,47 +1098,7 @@ public class SqlVerifyExplainService {
 	}
 
 	private Set<String> extractKnownTimeColumns(SqlGuardCheckRequest request) {
-		Set<String> columns = new LinkedHashSet<>();
-		if (request == null) {
-			return columns;
-		}
-		collectTimeColumns(request.getTableSchemas(), columns);
-		collectTimeColumns(request.getSemanticHits(), columns);
-		collectTimeColumns(request.getBusinessKnowledgeHits(), columns);
-		return columns;
-	}
-
-	private void collectTimeColumns(JsonNode node, Set<String> columns) {
-		if (node == null || node.isNull()) {
-			return;
-		}
-		if (node.isTextual()) {
-			String value = node.asText();
-			if (isLikelyTimeColumn(value)) {
-				columns.add(value.toLowerCase(Locale.ROOT));
-			}
-			return;
-		}
-		if (node.isArray()) {
-			for (JsonNode item : node) {
-				collectTimeColumns(item, columns);
-			}
-			return;
-		}
-		if (!node.isObject()) {
-			return;
-		}
-		node.fields().forEachRemaining(entry -> {
-			String fieldName = entry.getKey();
-			JsonNode value = entry.getValue();
-			if (value != null && value.isTextual()
-					&& ("name".equalsIgnoreCase(fieldName) || "columnName".equalsIgnoreCase(fieldName)
-							|| "fieldName".equalsIgnoreCase(fieldName) || "column".equalsIgnoreCase(fieldName))
-					&& isLikelyTimeColumn(value.asText())) {
-				columns.add(value.asText().toLowerCase(Locale.ROOT));
-			}
-			collectTimeColumns(value, columns);
-		});
+		return new LinkedHashSet<>();
 	}
 
 	private boolean isLikelyTimeColumn(String value) {

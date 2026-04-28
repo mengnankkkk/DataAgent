@@ -40,7 +40,7 @@ public enum DatasourceExplorerAction {
 		return Arrays.stream(values())
 			.filter(action -> action.name().equalsIgnoreCase(value))
 			.findFirst()
-			.orElseThrow(() -> new IllegalArgumentException("Unsupported datasource explorer action: " + value));
+			.orElseThrow(() -> new IllegalArgumentException("不支持的数据源探索动作：" + value));
 	}
 
 }

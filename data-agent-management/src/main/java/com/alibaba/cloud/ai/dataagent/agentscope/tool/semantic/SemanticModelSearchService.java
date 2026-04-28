@@ -93,7 +93,7 @@ public class SemanticModelSearchService {
 						activeDatasource.getDatasourceId(), scope.getTableNames());
 		if (CollectionUtils.isEmpty(candidates)) {
 			return emptyResult(query,
-					"当前 Agent/表范围内没有匹配的已启用语义模型条目；物理 schema 请改用 datasource explorer 查看。");
+					"当前 Agent/表范围内没有匹配的已启用语义模型条目；物理表结构请改用数据源探索工具查看。");
 		}
 
 		List<ScoredHit> scoredHits = candidates.stream()
@@ -112,29 +112,25 @@ public class SemanticModelSearchService {
 
 		if (scoredHits.isEmpty()) {
 			return emptyResult(query,
-					"没有匹配到补充语义提示；如果 datasource explorer 已能回答 schema 问题，就不要额外调用 semantic_model.search。");
+					"没有匹配到补充语义提示；如果数据源探索工具已能回答物理表结构问题，就不要额外调用 semantic_model.search。");
 		}
 
 		List<SemanticModelSearchHit> hits = scoredHits.stream().map(this::toHit).toList();
+		String summary = "共匹配到 %d 条补充语义提示。这些结果只用于补充理解表和字段语义，不能替代数据源探索工具的物理结构探索。"
+			.formatted(hits.size());
 		if (graphRequest != null) {
 			answerTraceExplainStore.recordSemanticSearch(graphRequest, query,
-					"Found %d supplemental semantic hints".formatted(hits.size()), hits);
+					"共匹配到 %d 条补充语义提示".formatted(hits.size()), hits);
 		}
 		else {
 			answerTraceExplainStore.recordSemanticSearch(query,
-					"Found %d supplemental semantic hints".formatted(hits.size()), hits);
+					"共匹配到 %d 条补充语义提示".formatted(hits.size()), hits);
 		}
-		return SemanticModelSearchResult.builder()
-			.query(query)
-			.summary(
-					"Found %d supplemental semantic hints. These are auxiliary explanations for table/column understanding, not a replacement for datasource exploration."
-						.formatted(hits.size()))
-			.hits(hits)
-			.build();
+		return SemanticModelSearchResult.builder().summary(summary).hits(hits).resolution("matched").build();
 	}
 
 	private SemanticModelSearchResult emptyResult(String query, String summary) {
-		return SemanticModelSearchResult.builder().query(query).summary(summary).build();
+		return SemanticModelSearchResult.builder().summary(summary).resolution("no_match").build();
 	}
 
 	private AgentDatasource resolveActiveDatasource(Long agentId) {
