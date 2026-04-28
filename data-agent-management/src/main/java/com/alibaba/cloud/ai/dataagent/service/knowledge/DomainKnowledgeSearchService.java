@@ -39,8 +39,8 @@ public interface DomainKnowledgeSearchService {
 	}
 
 	record SearchDiagnostics(String runtimeAgentId, Integer recalledBusinessKnowledgeCount,
-			Integer recalledBusinessTermCount, Integer recalledAgentKnowledgeCount, boolean businessKnowledgeVectorReady,
-			boolean businessTermVectorReady, boolean agentKnowledgeVectorReady) {
+			Integer recalledBusinessTermCount, Integer recalledAgentKnowledgeCount,
+			boolean businessKnowledgeVectorReady, boolean businessTermVectorReady, boolean agentKnowledgeVectorReady) {
 	}
 
 }

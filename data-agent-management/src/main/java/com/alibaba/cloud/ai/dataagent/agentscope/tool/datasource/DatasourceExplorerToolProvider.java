@@ -131,10 +131,8 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 	private String buildDescription(Datasource datasource, AgentDatasource agentDatasource) {
 		List<String> selectedTables = agentDatasource.getSelectTables() == null ? List.of()
 				: agentDatasource.getSelectTables();
-		String visibleTables = selectedTables.isEmpty()
-				? "当前未显式选表，将回退到数据源全部可见表"
-				: "当前显式选表 %d 个：%s"
-					.formatted(selectedTables.size(), String.join(", ", selectedTables.stream().limit(8).toList()));
+		String visibleTables = selectedTables.isEmpty() ? "当前未显式选表，将回退到数据源全部可见表" : "当前显式选表 %d 个：%s"
+			.formatted(selectedTables.size(), String.join(", ", selectedTables.stream().limit(8).toList()));
 		return """
 				数据源'%s'（%s）的统一探索工具。
 				可用于查看表列表、查看表结构、查看统一关系、按需预览样例数据，以及执行只读 SQL 查询。
@@ -149,7 +147,8 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 				8. 如果 schema、relations、列名和已知语义已经足够支持写 SQL，就直接进入 SQL_VERIFY/SEARCH，不要为了“先确认数据质量”再额外预览样例。
 				9. 不要根据可见值推断隐藏字段。例如不要从邮箱前缀、ID、编码或别名推断用户名或真实姓名。
 				10. %s
-				""".formatted(datasource.getName(), datasource.getType(), visibleTables);
+				"""
+			.formatted(datasource.getName(), datasource.getType(), visibleTables);
 	}
 
 	private static final class AgentBoundDatasourceExplorerToolCallback implements ToolCallback {
@@ -185,7 +184,8 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 			try {
 				DatasourceExplorerRequest request = objectMapper.readValue(toolInput, DatasourceExplorerRequest.class);
 				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(datasourceExplorerService.execute(agentId, request, graphRequest));
+				return objectMapper
+					.writeValueAsString(datasourceExplorerService.execute(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException("Datasource explorer tool failed: " + ex.getMessage(), ex);

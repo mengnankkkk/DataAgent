@@ -33,8 +33,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Cache the latest completed trace for each chat session so the frontend can inspect
- * the most recent AgentScope span chain without querying an external tracing backend.
+ * Cache the latest completed trace for each chat session so the frontend can inspect the
+ * most recent AgentScope span chain without querying an external tracing backend.
  */
 @Component
 public class SessionTraceStore implements SpanExporter {
@@ -56,9 +56,9 @@ public class SessionTraceStore implements SpanExporter {
 	private static final String META_OMITTED_ATTRIBUTE_COUNT = "_meta.omitted_attribute_count";
 
 	private static final List<String> SENSITIVE_ATTRIBUTE_KEY_TOKENS = List.of("password", "passwd", "pwd", "secret",
-			"api_key", "apikey", "api_token", "apitoken", "access_key", "access_token", "accesstoken",
-			"refresh_token", "refreshtoken", "id_token", "idtoken", "auth_token", "authtoken", "private_key",
-			"privatekey", "authorization", "cookie", "credential", "signature");
+			"api_key", "apikey", "api_token", "apitoken", "access_key", "access_token", "accesstoken", "refresh_token",
+			"refreshtoken", "id_token", "idtoken", "auth_token", "authtoken", "private_key", "privatekey",
+			"authorization", "cookie", "credential", "signature");
 
 	private final Object monitor = new Object();
 
@@ -240,11 +240,7 @@ public class SessionTraceStore implements SpanExporter {
 			roots.sort(Comparator.comparingLong(node -> node.span.getStartEpochMs()));
 			List<SpanView> rootViews = roots.stream().map(MutableTreeNode::toImmutable).toList();
 			SpanView rootSpan = rootViews.isEmpty() ? null : rootViews.get(0);
-			long startedAt = spansBySpanId.values()
-				.stream()
-				.mapToLong(SpanView::getStartEpochMs)
-				.min()
-				.orElse(0L);
+			long startedAt = spansBySpanId.values().stream().mapToLong(SpanView::getStartEpochMs).min().orElse(0L);
 			long endedAt = spansBySpanId.values().stream().mapToLong(SpanView::getEndEpochMs).max().orElse(0L);
 			long durationMs = Math.max(0L, endedAt - startedAt);
 			return new TraceView(sessionId, traceId, runtimeRequestId, agentId, startedAt, endedAt, durationMs,
@@ -265,9 +261,9 @@ public class SessionTraceStore implements SpanExporter {
 
 		private SpanView toImmutable() {
 			children.sort(Comparator.comparingLong(node -> node.span.getStartEpochMs()));
-			return new SpanView(span.getName(), span.getSpanId(), span.getParentSpanId(), span.getKind(), span.getStatus(),
-					span.getStartEpochMs(), span.getEndEpochMs(), span.getDurationMs(), span.getAttributes(),
-					children.stream().map(MutableTreeNode::toImmutable).toList());
+			return new SpanView(span.getName(), span.getSpanId(), span.getParentSpanId(), span.getKind(),
+					span.getStatus(), span.getStartEpochMs(), span.getEndEpochMs(), span.getDurationMs(),
+					span.getAttributes(), children.stream().map(MutableTreeNode::toImmutable).toList());
 		}
 
 	}

@@ -252,7 +252,8 @@ public class SchemaServiceImpl implements SchemaService {
 		return partitions;
 	}
 
-	protected void storeSchemaDocuments(Long agentId, Integer datasourceId, List<Document> columns, List<Document> tables) {
+	protected void storeSchemaDocuments(Long agentId, Integer datasourceId, List<Document> columns,
+			List<Document> tables) {
 		// 串行去批写入，并行流的时候有API限速了
 		List<List<Document>> columnBatches = batchingStrategy.batch(columns);
 		for (List<Document> batch : columnBatches) {
@@ -290,7 +291,8 @@ public class SchemaServiceImpl implements SchemaService {
 		agentVectorStoreService.deleteDocumentsByMetadata(metadata);
 	}
 
-	private void applyVisibleColumnRestrictions(List<TableInfoBO> tables, Map<String, List<String>> visibleColumnsByTable) {
+	private void applyVisibleColumnRestrictions(List<TableInfoBO> tables,
+			Map<String, List<String>> visibleColumnsByTable) {
 		Map<String, Set<String>> normalizedRestrictions = normalizeVisibleColumnRestrictions(visibleColumnsByTable);
 		if (normalizedRestrictions.isEmpty()) {
 			return;
@@ -316,7 +318,8 @@ public class SchemaServiceImpl implements SchemaService {
 		}
 	}
 
-	private Map<String, Set<String>> normalizeVisibleColumnRestrictions(Map<String, List<String>> visibleColumnsByTable) {
+	private Map<String, Set<String>> normalizeVisibleColumnRestrictions(
+			Map<String, List<String>> visibleColumnsByTable) {
 		Map<String, Set<String>> normalizedRestrictions = new LinkedHashMap<>();
 		Optional.ofNullable(visibleColumnsByTable).orElse(Map.of()).forEach((tableName, columns) -> {
 			String normalizedTableName = normalizeIdentifier(tableName);

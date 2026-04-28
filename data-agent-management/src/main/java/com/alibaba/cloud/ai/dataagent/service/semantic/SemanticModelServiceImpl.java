@@ -222,8 +222,8 @@ public class SemanticModelServiceImpl implements SemanticModelService {
 				log.error("导入第{}条记录失败: datasourceId={}, tableName={}, columnName={}", i + 1, dto.getDatasourceId(),
 						item.getTableName(), item.getColumnName(), e);
 				result.setFailCount(result.getFailCount() + 1);
-				result.addError(
-						String.format("第%d条记录导入失败（%s.%s）: %s", i + 1, item.getTableName(), item.getColumnName(), e.getMessage()));
+				result.addError(String.format("第%d条记录导入失败（%s.%s）: %s", i + 1, item.getTableName(), item.getColumnName(),
+						e.getMessage()));
 			}
 		}
 

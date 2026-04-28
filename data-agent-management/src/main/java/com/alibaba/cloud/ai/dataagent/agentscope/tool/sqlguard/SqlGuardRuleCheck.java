@@ -22,14 +22,14 @@ import lombok.Data;
 @Builder
 class SqlGuardRuleCheck {
 
-    private String code;
+	private String code;
 
-    private String title;
+	private String title;
 
-    private String status;
+	private String status;
 
-    private String detail;
+	private String detail;
 
-    private String evidence;
+	private String evidence;
 
 }

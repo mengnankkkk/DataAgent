@@ -47,8 +47,8 @@ public class AnswerTraceExplainStore {
 
 	private final ThreadLocal<ExplainContext> currentContext = new ThreadLocal<>();
 
-	private final LinkedHashMap<String, LinkedHashMap<String, ExplainAssembly>> explainsBySession = new LinkedHashMap<>(32,
-			0.75f, true);
+	private final LinkedHashMap<String, LinkedHashMap<String, ExplainAssembly>> explainsBySession = new LinkedHashMap<>(
+			32, 0.75f, true);
 
 	public void openScope(GraphRequest request) {
 		if (request == null || !StringUtils.hasText(request.getThreadId())
@@ -96,7 +96,8 @@ public class AnswerTraceExplainStore {
 		withCurrentAssembly(assembly -> applySemanticSearch(assembly, query, summary, hits));
 	}
 
-	public void recordSemanticSearch(GraphRequest request, String query, String summary, List<SemanticModelSearchHit> hits) {
+	public void recordSemanticSearch(GraphRequest request, String query, String summary,
+			List<SemanticModelSearchHit> hits) {
 		withAssembly(request, assembly -> applySemanticSearch(assembly, query, summary, hits));
 	}
 
@@ -203,7 +204,8 @@ public class AnswerTraceExplainStore {
 		}
 	}
 
-	private void applySemanticSearch(ExplainAssembly assembly, String query, String summary, List<SemanticModelSearchHit> hits) {
+	private void applySemanticSearch(ExplainAssembly assembly, String query, String summary,
+			List<SemanticModelSearchHit> hits) {
 		assembly.toolSteps.add(ToolStepView.builder()
 			.toolName("semantic_model.search")
 			.title("语义匹配")
@@ -255,7 +257,8 @@ public class AnswerTraceExplainStore {
 			}
 		}
 		if (result.warnings() != null) {
-			assembly.warnings.addAll(result.warnings().stream().filter(StringUtils::hasText).map(String::trim).toList());
+			assembly.warnings
+				.addAll(result.warnings().stream().filter(StringUtils::hasText).map(String::trim).toList());
 		}
 		assembly.updatedAt = Instant.now().toEpochMilli();
 	}
@@ -405,6 +408,7 @@ public class AnswerTraceExplainStore {
 				.updatedAt(updatedAt)
 				.build();
 		}
+
 	}
 
 	@Data
@@ -453,6 +457,7 @@ public class AnswerTraceExplainStore {
 		private List<String> warnings = List.of();
 
 		private long updatedAt;
+
 	}
 
 	@Data
@@ -473,6 +478,7 @@ public class AnswerTraceExplainStore {
 		private Integer score;
 
 		private String relationHint;
+
 	}
 
 	@Data
@@ -493,6 +499,7 @@ public class AnswerTraceExplainStore {
 		private String source;
 
 		private String concreteType;
+
 	}
 
 	@Data
@@ -511,6 +518,7 @@ public class AnswerTraceExplainStore {
 		private String datasource;
 
 		private long timestampEpochMs;
+
 	}
 
 	@Data
@@ -528,6 +536,7 @@ public class AnswerTraceExplainStore {
 		private int knowledgeHitCount;
 
 		private int toolStepCount;
+
 	}
 
 }

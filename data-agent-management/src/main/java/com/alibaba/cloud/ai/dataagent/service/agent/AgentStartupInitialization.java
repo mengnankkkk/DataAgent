@@ -164,7 +164,8 @@ public class AgentStartupInitialization implements ApplicationRunner, Disposable
 			return agentVectorStoreService.hasSchemaDocuments(agentIdStr, datasourceIdStr);
 		}
 		catch (Exception e) {
-			log.error("Failed to check initialization status for agent: {} and datasource: {}, assuming not initialized",
+			log.error(
+					"Failed to check initialization status for agent: {} and datasource: {}, assuming not initialized",
 					agentId, datasourceId, e);
 			return false;
 		}

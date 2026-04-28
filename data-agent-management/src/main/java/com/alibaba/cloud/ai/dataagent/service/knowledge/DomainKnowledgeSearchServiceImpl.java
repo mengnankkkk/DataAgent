@@ -231,8 +231,8 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 			if (knowledge.getIsRecall() == null || knowledge.getIsRecall() != 1) {
 				continue;
 			}
-			hits.add(new KnowledgeHit("businessKnowledge", String.valueOf(knowledgeId),
-					knowledge.getBusinessTerm(), abbreviate(knowledge.getDescription(), MAX_SUMMARY_LENGTH),
+			hits.add(new KnowledgeHit("businessKnowledge", String.valueOf(knowledgeId), knowledge.getBusinessTerm(),
+					abbreviate(knowledge.getDescription(), MAX_SUMMARY_LENGTH),
 					abbreviate(document.getText(), MAX_SNIPPET_LENGTH), "businessKnowledge#" + knowledgeId, null));
 		}
 		return hits;

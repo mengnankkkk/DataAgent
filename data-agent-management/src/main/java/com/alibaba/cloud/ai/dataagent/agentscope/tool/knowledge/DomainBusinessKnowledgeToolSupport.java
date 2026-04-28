@@ -128,7 +128,8 @@ public class DomainBusinessKnowledgeToolSupport {
 				DomainKnowledgeSearchRequest request = new DomainKnowledgeSearchRequest(query,
 						knowledgeTypes.isEmpty() ? null : List.copyOf(knowledgeTypes), topK, similarityThreshold);
 				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, graphRequest));
+				return objectMapper
+					.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException("Failed to search domain business knowledge: " + ex.getMessage(), ex);

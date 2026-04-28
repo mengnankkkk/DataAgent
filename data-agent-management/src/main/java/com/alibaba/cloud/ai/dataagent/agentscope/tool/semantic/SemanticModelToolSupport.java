@@ -97,7 +97,8 @@ public class SemanticModelToolSupport {
 						? objectMapper.readValue(toolInput, SemanticModelSearchRequest.class)
 						: new SemanticModelSearchRequest();
 				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(semanticModelSearchService.search(agentId, request, graphRequest));
+				return objectMapper
+					.writeValueAsString(semanticModelSearchService.search(agentId, request, graphRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException("Failed to search semantic model hints: " + ex.getMessage(), ex);

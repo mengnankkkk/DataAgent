@@ -267,10 +267,12 @@ public class AgentVectorStoreServiceImpl implements AgentVectorStoreService {
 
 	@Override
 	public boolean hasDocuments(String agentId) {
-		return hasDocumentsByMetadata(agentId, Map.of(Constant.AGENT_ID, agentId)); /*
-		// 类似 MySQL 的 LIMIT 1,只检查是否存在文档
-		return hasDocumentsByMetadata(agentId, Map.of(Constant.AGENT_ID, agentId));
-	*/
+		return hasDocumentsByMetadata(agentId, Map.of(Constant.AGENT_ID,
+				agentId)); /*
+							 * // 类似 MySQL 的 LIMIT 1,只检查是否存在文档 return
+							 * hasDocumentsByMetadata(agentId, Map.of(Constant.AGENT_ID,
+							 * agentId));
+							 */
 	}
 
 	@Override

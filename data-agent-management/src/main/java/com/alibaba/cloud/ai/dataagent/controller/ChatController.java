@@ -182,8 +182,7 @@ public class ChatController {
 	 */
 	@PostMapping("/sessions/{sessionId}/messages")
 	public ResponseEntity<ChatMessage> saveMessage(@PathVariable(value = "sessionId") String sessionId,
-			@RequestParam(value = "agentId") Long agentId,
-			@RequestBody ChatMessageDTO request) {
+			@RequestParam(value = "agentId") Long agentId, @RequestBody ChatMessageDTO request) {
 		try {
 			if (request == null) {
 				return ResponseEntity.badRequest().build();
@@ -221,8 +220,7 @@ public class ChatController {
 	 */
 	@PutMapping("/sessions/{sessionId}/pin")
 	public ResponseEntity<ApiResponse> pinSession(@PathVariable(value = "sessionId") String sessionId,
-			@RequestParam(value = "agentId") Long agentId,
-			@RequestParam(value = "isPinned") Boolean isPinned) {
+			@RequestParam(value = "agentId") Long agentId, @RequestParam(value = "isPinned") Boolean isPinned) {
 		try {
 			chatSessionService.pinSession(sessionId, isPinned, agentId);
 			String message = isPinned ? "会话已置顶" : "会话已取消置顶";
@@ -242,8 +240,7 @@ public class ChatController {
 	 */
 	@PutMapping("/sessions/{sessionId}/rename")
 	public ResponseEntity<ApiResponse> renameSession(@PathVariable(value = "sessionId") String sessionId,
-			@RequestParam(value = "agentId") Long agentId,
-			@RequestParam(value = "title") String title) {
+			@RequestParam(value = "agentId") Long agentId, @RequestParam(value = "title") String title) {
 		try {
 			if (!StringUtils.hasText(title)) {
 				return ResponseEntity.badRequest().body(ApiResponse.error("标题不能为空"));
@@ -285,8 +282,7 @@ public class ChatController {
 	 */
 	@PostMapping("/sessions/{sessionId}/reports/html")
 	public ResponseEntity<byte[]> convertAndDownloadHtml(@PathVariable(value = "sessionId") String sessionId,
-			@RequestParam(value = "agentId") Long agentId,
-			@RequestBody String content) {
+			@RequestParam(value = "agentId") Long agentId, @RequestBody String content) {
 		try {
 			if (!StringUtils.hasText(content)) {
 				return ResponseEntity.badRequest().build();

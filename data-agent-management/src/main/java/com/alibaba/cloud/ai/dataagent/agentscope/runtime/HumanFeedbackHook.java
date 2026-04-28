@@ -81,7 +81,8 @@ public class HumanFeedbackHook implements Hook {
 		}
 		if (StringUtils.hasText(request.getHumanFeedbackContent())) {
 			builder.append("\n- Feedback: ").append(request.getHumanFeedbackContent());
-			builder.append("\n- Treat the feedback as authoritative clarification or explicit assumptions before any tool call.");
+			builder.append(
+					"\n- Treat the feedback as authoritative clarification or explicit assumptions before any tool call.");
 		}
 		return builder.toString();
 	}

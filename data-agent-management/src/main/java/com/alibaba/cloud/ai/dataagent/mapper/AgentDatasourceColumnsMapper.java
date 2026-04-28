@@ -32,13 +32,9 @@ public interface AgentDatasourceColumnsMapper {
 	@Delete("DELETE FROM agent_datasource_columns WHERE agent_datasource_id = #{agentDatasourceId}")
 	int removeAllColumns(@Param("agentDatasourceId") int agentDatasourceId);
 
-	@Delete("<script>"
-			+ "DELETE FROM agent_datasource_columns WHERE agent_datasource_id = #{agentDatasourceId}"
-			+ "<if test='tables != null and tables.size() > 0'>"
-			+ " AND table_name NOT IN ("
-			+ "<foreach collection='tables' item='table' separator=','>#{table}</foreach>"
-			+ ")"
-			+ "</if>"
+	@Delete("<script>" + "DELETE FROM agent_datasource_columns WHERE agent_datasource_id = #{agentDatasourceId}"
+			+ "<if test='tables != null and tables.size() > 0'>" + " AND table_name NOT IN ("
+			+ "<foreach collection='tables' item='table' separator=','>#{table}</foreach>" + ")" + "</if>"
 			+ "</script>")
 	int removeColumnsOutsideTables(@Param("agentDatasourceId") int agentDatasourceId,
 			@Param("tables") List<String> tables);
@@ -46,9 +42,7 @@ public interface AgentDatasourceColumnsMapper {
 	@Insert("<script>"
 			+ "INSERT IGNORE INTO agent_datasource_columns (agent_datasource_id, table_name, column_name) VALUES "
 			+ "<foreach collection='rows' item='row' separator=','>"
-			+ "(#{row.agentDatasourceId}, #{row.tableName}, #{row.columnName})"
-			+ "</foreach>"
-			+ "</script>")
+			+ "(#{row.agentDatasourceId}, #{row.tableName}, #{row.columnName})" + "</foreach>" + "</script>")
 	int insertColumns(@Param("rows") List<AgentDatasourceColumn> rows);
 
 }

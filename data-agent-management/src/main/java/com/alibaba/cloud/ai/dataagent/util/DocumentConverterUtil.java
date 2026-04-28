@@ -35,7 +35,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DocumentConverterUtil {
 
-	public static List<Document> convertColumnsToDocuments(Long agentId, Integer datasourceId, List<TableInfoBO> tables) {
+	public static List<Document> convertColumnsToDocuments(Long agentId, Integer datasourceId,
+			List<TableInfoBO> tables) {
 		List<Document> documents = new ArrayList<>();
 		for (TableInfoBO table : tables) {
 			// 使用已经处理过的列数据，避免重复查询
@@ -99,7 +100,8 @@ public class DocumentConverterUtil {
 		return new Document(text, metadata);
 	}
 
-	public static List<Document> convertTablesToDocuments(Long agentId, Integer datasourceId, List<TableInfoBO> tables) {
+	public static List<Document> convertTablesToDocuments(Long agentId, Integer datasourceId,
+			List<TableInfoBO> tables) {
 		return tables.stream()
 			.map(table -> DocumentConverterUtil.convertTableToDocument(agentId, datasourceId, table))
 			.collect(Collectors.toList());

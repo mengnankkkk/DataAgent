@@ -73,7 +73,8 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 
 			// Create database configuration
 			DbConfigBO dbConfig = datasourceService.getDbConfig(datasource);
-			AgentDatasource agentDatasource = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId, datasourceId);
+			AgentDatasource agentDatasource = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId,
+					datasourceId);
 			if (agentDatasource == null) {
 				throw new RuntimeException("Agent datasource relation not found with agentId=%s, datasourceId=%s"
 					.formatted(agentId, datasourceId));
@@ -202,7 +203,8 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 			normalizedTables = sanitizeRequestedTables(tables, datasourceTableIndex);
 		}
 		catch (Exception ex) {
-			throw new IllegalArgumentException("Failed to validate datasource tables: %s".formatted(ex.getMessage()), ex);
+			throw new IllegalArgumentException("Failed to validate datasource tables: %s".formatted(ex.getMessage()),
+					ex);
 		}
 		if (normalizedTables.isEmpty()) {
 			tablesMapper.removeAllTables(datasource.getId());
@@ -218,8 +220,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 	@Override
 	@Transactional
 	public AgentDatasource updateDatasourceColumns(Long agentId, Integer datasourceId,
-			Map<String, List<String>> columnsByTable)
-			throws Exception {
+			Map<String, List<String>> columnsByTable) throws Exception {
 		if (agentId == null || datasourceId == null || columnsByTable == null) {
 			throw new IllegalArgumentException("参数不能为空");
 		}
@@ -280,7 +281,8 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 	}
 
 	private Map<String, List<String>> loadSelectedColumns(int agentDatasourceId) {
-		List<AgentDatasourceColumn> rows = Optional.ofNullable(columnsMapper.getAgentDatasourceColumns(agentDatasourceId))
+		List<AgentDatasourceColumn> rows = Optional
+			.ofNullable(columnsMapper.getAgentDatasourceColumns(agentDatasourceId))
 			.orElse(List.of());
 		Map<String, List<String>> columnsByTable = new LinkedHashMap<>();
 		for (AgentDatasourceColumn row : rows) {
@@ -293,18 +295,20 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 		return Map.copyOf(columnsByTable);
 	}
 
-	private TableResolutionIndex loadAllowedTables(AgentDatasource agentDatasource, Integer datasourceId) throws Exception {
+	private TableResolutionIndex loadAllowedTables(AgentDatasource agentDatasource, Integer datasourceId)
+			throws Exception {
 		List<String> datasourceTables = datasourceService.getDatasourceTables(datasourceId);
 		TableResolutionIndex datasourceTableIndex = buildTableResolutionIndex(datasourceTables);
-		List<String> selectedTables = Optional.ofNullable(tablesMapper.getAgentDatasourceTables(agentDatasource.getId()))
+		List<String> selectedTables = Optional
+			.ofNullable(tablesMapper.getAgentDatasourceTables(agentDatasource.getId()))
 			.orElse(List.of());
 		List<String> visibleTables = selectedTables.isEmpty() ? datasourceTables
 				: sanitizeRequestedTables(selectedTables, datasourceTableIndex, true);
 		return buildTableResolutionIndex(visibleTables);
 	}
 
-	private Map<String, List<String>> sanitizeColumnsByTable(Integer datasourceId, Map<String, List<String>> columnsByTable,
-			TableResolutionIndex allowedTables) throws Exception {
+	private Map<String, List<String>> sanitizeColumnsByTable(Integer datasourceId,
+			Map<String, List<String>> columnsByTable, TableResolutionIndex allowedTables) throws Exception {
 		Map<String, List<String>> sanitized = new LinkedHashMap<>();
 		for (Map.Entry<String, List<String>> entry : columnsByTable.entrySet()) {
 			String requestedTableName = entry.getKey();
@@ -393,14 +397,14 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 		if (isQualifiedIdentifier(requestedTableName) && !allowQualifiedFallback) {
 			return null;
 		}
-		List<String> leafMatches = tableIndex.leafTables().getOrDefault(normalizeLeafIdentifier(requestedTableName),
-				List.of());
+		List<String> leafMatches = tableIndex.leafTables()
+			.getOrDefault(normalizeLeafIdentifier(requestedTableName), List.of());
 		if (leafMatches.size() == 1) {
 			return leafMatches.get(0);
 		}
 		if (leafMatches.size() > 1) {
-			throw new IllegalArgumentException("Table '%s' is ambiguous across datasource tables: %s"
-				.formatted(requestedTableName, leafMatches));
+			throw new IllegalArgumentException(
+					"Table '%s' is ambiguous across datasource tables: %s".formatted(requestedTableName, leafMatches));
 		}
 		return null;
 	}

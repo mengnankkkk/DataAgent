@@ -99,8 +99,7 @@ public class DatasourceExplorerService {
 	private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
 	};
 
-	private static final String HIDDEN_FIELD_INFERENCE_WARNING =
-			" 请严格基于返回字段作答，不要根据邮箱前缀、ID、编码、别名等可见值推断任何未返回的隐藏字段。";
+	private static final String HIDDEN_FIELD_INFERENCE_WARNING = " 请严格基于返回字段作答，不要根据邮箱前缀、ID、编码、别名等可见值推断任何未返回的隐藏字段。";
 
 	private final AgentDatasourceService agentDatasourceService;
 
@@ -180,8 +179,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult getTableSchema(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest)
-			throws Exception {
+			@Nullable GraphRequest graphRequest) throws Exception {
 		String tableName = resolveVisibleTableName(context, requireSingleTableName(request));
 		List<ColumnInfoBO> columns = context.accessor()
 			.showColumns(context.dbConfig(),
@@ -196,17 +194,18 @@ public class DatasourceExplorerService {
 		List<UnifiedRelation> relations = filterRelations(context, tableName);
 		List<Map<String, Object>> relationEntries = relations.stream().map(this::toRelationEntry).toList();
 		Map<String, Object> tableEntry = toTableEntry(context, tableName, tableDocument, relations);
-		return capture(baseResult(context, DatasourceExplorerAction.GET_TABLE_SCHEMA,
-				"已加载表“%s”的结构信息".formatted(tableName))
-			.tables(List.of(tableEntry))
-			.columns(columnEntries)
-			.relations(relationEntries)
-			.usedTables(List.of(tableName))
-			.usedColumns(listColumnNames(columnEntries))
-			.permissions(buildPermissionSummary(context, List.of(tableName)))
-			.stats(buildStatsSummary(0, null, false, "not_collected"))
-			.nextSuggestedActions(List.of("search", "get_related_tables", "get_table_schema"))
-			.build(), graphRequest);
+		return capture(
+				baseResult(context, DatasourceExplorerAction.GET_TABLE_SCHEMA, "已加载表“%s”的结构信息".formatted(tableName))
+					.tables(List.of(tableEntry))
+					.columns(columnEntries)
+					.relations(relationEntries)
+					.usedTables(List.of(tableName))
+					.usedColumns(listColumnNames(columnEntries))
+					.permissions(buildPermissionSummary(context, List.of(tableName)))
+					.stats(buildStatsSummary(0, null, false, "not_collected"))
+					.nextSuggestedActions(List.of("search", "get_related_tables", "get_table_schema"))
+					.build(),
+				graphRequest);
 	}
 
 	private DatasourceExplorerResult getRelatedTables(ExplorerContext context, DatasourceExplorerRequest request,
@@ -221,8 +220,8 @@ public class DatasourceExplorerService {
 			.collect(Collectors.toCollection(LinkedHashSet::new));
 		Map<String, Document> tableDocumentMap = loadTableDocumentMap(context, new ArrayList<>(relatedTables));
 		List<Map<String, Object>> tableEntries = relatedTables.stream()
-			.map(relatedTable -> toTableEntry(context, relatedTable, tableDocumentMap.get(normalizeTableName(relatedTable)),
-					filterRelations(context, relatedTable)))
+			.map(relatedTable -> toTableEntry(context, relatedTable,
+					tableDocumentMap.get(normalizeTableName(relatedTable)), filterRelations(context, relatedTable)))
 			.toList();
 		return capture(baseResult(context, DatasourceExplorerAction.GET_RELATED_TABLES,
 				"表“%s”共找到 %d 张关联表".formatted(tableName, tableEntries.size()))
@@ -236,8 +235,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult previewRows(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest)
-			throws Exception {
+			@Nullable GraphRequest graphRequest) throws Exception {
 		String tableName = resolveVisibleTableName(context, requireSingleTableName(request));
 		int limit = normalizeLimit(request.getLimit());
 		String sql = SqlUtil.buildSelectSql(context.dbConfig().getDialectType(),
@@ -245,8 +243,7 @@ public class DatasourceExplorerService {
 				resolvePreviewColumnSelection(context, tableName), limit);
 		ResultSetBO resultSet = executeSql(context, sql);
 		return capture(baseResult(context, DatasourceExplorerAction.PREVIEW_ROWS,
-				("已预览表“%s”的 %d 行数据".formatted(tableName, resultSet.getData().size()))
-					+ HIDDEN_FIELD_INFERENCE_WARNING)
+				("已预览表“%s”的 %d 行数据".formatted(tableName, resultSet.getData().size())) + HIDDEN_FIELD_INFERENCE_WARNING)
 			.tables(List.of(Map.of("name", tableName)))
 			.columns(toColumnHeaders(resultSet))
 			.rows(toRows(resultSet))
@@ -264,8 +261,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult search(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest)
-			throws Exception {
+			@Nullable GraphRequest graphRequest) throws Exception {
 		String rawSql = StringUtils.trimToNull(request.getSql());
 		if (rawSql == null) {
 			throw new IllegalArgumentException("search action 必须提供 sql");
@@ -274,14 +270,13 @@ public class DatasourceExplorerService {
 		SqlGuardedQuery guardedQuery = guardReadonlySql(context, rawSql, limit);
 		ResultSetBO resultSet = filterResultSet(executeSql(context, guardedQuery.sql()), guardedQuery);
 		return capture(baseResult(context, DatasourceExplorerAction.SEARCH,
-				("已执行只读查询，返回 %d 行结果".formatted(resultSet.getData().size()))
-					+ HIDDEN_FIELD_INFERENCE_WARNING)
+				("已执行只读查询，返回 %d 行结果".formatted(resultSet.getData().size())) + HIDDEN_FIELD_INFERENCE_WARNING)
 			.columns(toColumnHeaders(resultSet))
 			.rows(toRows(resultSet))
 			.sql(guardedQuery.sql())
 			.sqlExplanation(buildSqlExplanation(DatasourceExplorerAction.SEARCH, guardedQuery.sql(),
-					guardedQuery.referencedTables().stream().toList(), resultSet.getColumn(), limit, resultSet.getData().size(),
-					resultSet.getData().size() >= limit))
+					guardedQuery.referencedTables().stream().toList(), resultSet.getColumn(), limit,
+					resultSet.getData().size(), resultSet.getData().size() >= limit))
 			.usedTables(guardedQuery.referencedTables().stream().toList())
 			.usedColumns(guardedQuery.allowedResultHeaders() == null || guardedQuery.allowedResultHeaders().isEmpty()
 					? resultSet.getColumn() : guardedQuery.allowedResultHeaders().stream().toList())
@@ -312,8 +307,8 @@ public class DatasourceExplorerService {
 		Set<String> visibleTableNameSet = visibleTables.stream()
 			.map(this::normalizeTableName)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
-		Map<String, List<String>> visibleColumnsByTable = buildVisibleColumnsByTable(agentDatasource, visibleTablesByName,
-				visibleTablesByLeafName);
+		Map<String, List<String>> visibleColumnsByTable = buildVisibleColumnsByTable(agentDatasource,
+				visibleTablesByName, visibleTablesByLeafName);
 		Map<String, Set<String>> visibleColumnNameSetByTable = visibleColumnsByTable.entrySet()
 			.stream()
 			.collect(Collectors.toMap(Map.Entry::getKey,
@@ -380,7 +375,8 @@ public class DatasourceExplorerService {
 		SqlValidationResult validationResult = new SqlColumnAccessValidator(context).validate((Select) statement);
 		String guardedSql = hasLimit(compactSql) ? compactSql
 				: wrapLimitSql(context.dbConfig().getDialectType(), compactSql, limit);
-		return new SqlGuardedQuery(guardedSql, validationResult.referencedTables(), validationResult.allowedResultHeaders());
+		return new SqlGuardedQuery(guardedSql, validationResult.referencedTables(),
+				validationResult.allowedResultHeaders());
 	}
 
 	private String stripTrailingSemicolons(String sql) {
@@ -450,8 +446,9 @@ public class DatasourceExplorerService {
 			return Collections.emptyMap();
 		}
 		try {
-			return schemaService.getTableDocuments(context.agentDatasource().getAgentId().toString(),
-					context.datasource().getId(), tableNames)
+			return schemaService
+				.getTableDocuments(context.agentDatasource().getAgentId().toString(), context.datasource().getId(),
+						tableNames)
 				.stream()
 				.collect(Collectors.toMap(doc -> normalizeTableName(String.valueOf(doc.getMetadata().get("name"))),
 						doc -> doc, (left, right) -> left, LinkedHashMap::new));
@@ -463,8 +460,9 @@ public class DatasourceExplorerService {
 
 	private Map<String, Document> loadColumnDocumentMap(ExplorerContext context, String tableName) {
 		try {
-			return schemaService.getColumnDocumentsByTableName(context.agentDatasource().getAgentId().toString(),
-					context.datasource().getId(), List.of(tableName))
+			return schemaService
+				.getColumnDocumentsByTableName(context.agentDatasource().getAgentId().toString(),
+						context.datasource().getId(), List.of(tableName))
 				.stream()
 				.collect(Collectors.toMap(doc -> normalizeColumnName(String.valueOf(doc.getMetadata().get("name"))),
 						doc -> doc, (left, right) -> left, LinkedHashMap::new));
@@ -484,9 +482,8 @@ public class DatasourceExplorerService {
 			tableEntry.put("schema", tableDocument.getMetadata().getOrDefault("schema", ""));
 			tableEntry.put("description", tableDocument.getMetadata().getOrDefault("description", ""));
 			tableEntry.put("primaryKeys", tableDocument.getMetadata().getOrDefault("primaryKey", List.of()));
-			tableEntry.put("foreignKeys",
-					StringUtils.defaultIfBlank(unifiedForeignKeys,
-							String.valueOf(tableDocument.getMetadata().getOrDefault("foreignKey", ""))));
+			tableEntry.put("foreignKeys", StringUtils.defaultIfBlank(unifiedForeignKeys,
+					String.valueOf(tableDocument.getMetadata().getOrDefault("foreignKey", ""))));
 		}
 		else if (StringUtils.isNotBlank(unifiedForeignKeys)) {
 			tableEntry.put("foreignKeys", unifiedForeignKeys);
@@ -560,8 +557,8 @@ public class DatasourceExplorerService {
 	}
 
 	private List<UnifiedRelation> buildUnifiedRelations(Map<String, List<String>> visibleTablesByName,
-			Map<String, List<String>> visibleTablesByLeafName,
-			List<ForeignKeyInfoBO> physicalRelations, List<LogicalRelation> logicalRelations) {
+			Map<String, List<String>> visibleTablesByLeafName, List<ForeignKeyInfoBO> physicalRelations,
+			List<LogicalRelation> logicalRelations) {
 		Map<String, UnifiedRelation> relationMap = new LinkedHashMap<>();
 		for (ForeignKeyInfoBO physicalRelation : physicalRelations) {
 			UnifiedRelation relation = canonicalizeRelation(visibleTablesByName, visibleTablesByLeafName,
@@ -594,8 +591,8 @@ public class DatasourceExplorerService {
 	private UnifiedRelation toUnifiedRelation(LogicalRelation relation) {
 		return new UnifiedRelation(relation.getSourceTableName(), relation.getSourceColumnName(),
 				relation.getTargetTableName(), relation.getTargetColumnName(),
-				StringUtils.defaultString(relation.getRelationType()), StringUtils.defaultString(relation.getDescription()),
-				"logical", true, false);
+				StringUtils.defaultString(relation.getRelationType()),
+				StringUtils.defaultString(relation.getDescription()), "logical", true, false);
 	}
 
 	private UnifiedRelation canonicalizeRelation(Map<String, List<String>> visibleTablesByName,
@@ -607,9 +604,9 @@ public class DatasourceExplorerService {
 		if (sourceTable.isEmpty() || targetTable.isEmpty()) {
 			return null;
 		}
-		return new UnifiedRelation(sourceTable.get(), relation.sourceColumn(), targetTable.get(), relation.targetColumn(),
-				relation.relationType(), relation.description(), relation.sourceType(), relation.virtual(),
-				relation.declaredInDatabase());
+		return new UnifiedRelation(sourceTable.get(), relation.sourceColumn(), targetTable.get(),
+				relation.targetColumn(), relation.relationType(), relation.description(), relation.sourceType(),
+				relation.virtual(), relation.declaredInDatabase());
 	}
 
 	private void mergeRelation(Map<String, UnifiedRelation> relationMap, UnifiedRelation incoming) {
@@ -632,7 +629,8 @@ public class DatasourceExplorerService {
 
 	private UnifiedRelation mergeRelation(UnifiedRelation preferred, UnifiedRelation supplement) {
 		return new UnifiedRelation(preferred.sourceTable(), preferred.sourceColumn(), preferred.targetTable(),
-				preferred.targetColumn(), StringUtils.firstNonBlank(preferred.relationType(), supplement.relationType()),
+				preferred.targetColumn(),
+				StringUtils.firstNonBlank(preferred.relationType(), supplement.relationType()),
 				StringUtils.firstNonBlank(preferred.description(), supplement.description()), preferred.sourceType(),
 				preferred.virtual(), preferred.declaredInDatabase());
 	}
@@ -654,14 +652,15 @@ public class DatasourceExplorerService {
 			}
 		}
 		Map<String, List<UnifiedRelation>> immutableIndex = new LinkedHashMap<>();
-		relationIndex.forEach((tableName, tableRelations) -> immutableIndex.put(tableName, List.copyOf(tableRelations)));
+		relationIndex
+			.forEach((tableName, tableRelations) -> immutableIndex.put(tableName, List.copyOf(tableRelations)));
 		return Map.copyOf(immutableIndex);
 	}
 
 	private String summarizeRelations(List<UnifiedRelation> relations) {
 		return relations.stream()
-			.map(relation -> relation.sourceTable() + "." + relation.sourceColumn() + "=" + relation.targetTable()
-					+ "." + relation.targetColumn())
+			.map(relation -> relation.sourceTable() + "." + relation.sourceColumn() + "=" + relation.targetTable() + "."
+					+ relation.targetColumn())
 			.distinct()
 			.collect(Collectors.joining("、"));
 	}
@@ -696,14 +695,18 @@ public class DatasourceExplorerService {
 		if (keptIndexes.size() == originalColumns.size()) {
 			return resultSet;
 		}
-		List<Map<String, String>> filteredRows = Optional.ofNullable(resultSet.getData()).orElse(List.of()).stream().map(row -> {
-			Map<String, String> filteredRow = new LinkedHashMap<>();
-			for (Integer keptIndex : keptIndexes) {
-				String columnName = originalColumns.get(keptIndex);
-				filteredRow.put(columnName, row.get(columnName));
-			}
-			return filteredRow;
-		}).toList();
+		List<Map<String, String>> filteredRows = Optional.ofNullable(resultSet.getData())
+			.orElse(List.of())
+			.stream()
+			.map(row -> {
+				Map<String, String> filteredRow = new LinkedHashMap<>();
+				for (Integer keptIndex : keptIndexes) {
+					String columnName = originalColumns.get(keptIndex);
+					filteredRow.put(columnName, row.get(columnName));
+				}
+				return filteredRow;
+			})
+			.toList();
 		resultSet.setColumn(keptColumns);
 		resultSet.setData(filteredRows);
 		return resultSet;
@@ -718,7 +721,8 @@ public class DatasourceExplorerService {
 			.anyMatch(value -> value.contains(query));
 	}
 
-	private List<ColumnInfoBO> applyVisibleColumnFilter(ExplorerContext context, String tableName, List<ColumnInfoBO> columns) {
+	private List<ColumnInfoBO> applyVisibleColumnFilter(ExplorerContext context, String tableName,
+			List<ColumnInfoBO> columns) {
 		return Optional.ofNullable(columns)
 			.orElse(List.of())
 			.stream()
@@ -755,7 +759,8 @@ public class DatasourceExplorerService {
 
 	private Map<String, List<String>> buildVisibleColumnsByTable(AgentDatasource agentDatasource,
 			Map<String, List<String>> visibleTablesByName, Map<String, List<String>> visibleTablesByLeafName) {
-		Map<String, List<String>> selectedColumns = Optional.ofNullable(agentDatasource.getSelectColumns()).orElse(Map.of());
+		Map<String, List<String>> selectedColumns = Optional.ofNullable(agentDatasource.getSelectColumns())
+			.orElse(Map.of());
 		Map<String, List<String>> visibleColumnsByTable = new LinkedHashMap<>();
 		selectedColumns.forEach((tableName, columns) -> {
 			Optional<String> resolvedTableName = findVisibleTableName(visibleTablesByName, visibleTablesByLeafName,
@@ -825,8 +830,8 @@ public class DatasourceExplorerService {
 			return Optional.of(exactMatches.get(0));
 		}
 		if (exactMatches.size() > 1) {
-			throw new IllegalArgumentException(
-					"Table '%s' maps to multiple visible tables: %s".formatted(tableName, String.join(", ", exactMatches)));
+			throw new IllegalArgumentException("Table '%s' maps to multiple visible tables: %s".formatted(tableName,
+					String.join(", ", exactMatches)));
 		}
 		if (isQualifiedIdentifier(tableName) && !allowQualifiedFallback) {
 			return Optional.empty();
@@ -836,8 +841,8 @@ public class DatasourceExplorerService {
 			return Optional.of(leafMatches.get(0));
 		}
 		if (leafMatches.size() > 1) {
-			throw new IllegalArgumentException("Table '%s' is ambiguous across visible tables: %s"
-				.formatted(tableName, String.join(", ", leafMatches)));
+			throw new IllegalArgumentException("Table '%s' is ambiguous across visible tables: %s".formatted(tableName,
+					String.join(", ", leafMatches)));
 		}
 		return Optional.empty();
 	}
@@ -924,26 +929,24 @@ public class DatasourceExplorerService {
 		if (!resolvedTables.isEmpty()) {
 			permissions.put("relevantTables", resolvedTables);
 		}
-		List<Map<String, Object>> columnRestrictions = resolvedTables.stream()
-			.map(tableName -> {
-				List<String> visibleColumns = context.visibleColumnsByTable().get(normalizeTableName(tableName));
-				if (visibleColumns == null) {
-					return null;
-				}
-				Map<String, Object> restriction = new LinkedHashMap<>();
-				restriction.put("tableName", tableName);
-				restriction.put("allowedColumns", visibleColumns);
-				return restriction;
-			})
-			.filter(Objects::nonNull)
-			.toList();
+		List<Map<String, Object>> columnRestrictions = resolvedTables.stream().map(tableName -> {
+			List<String> visibleColumns = context.visibleColumnsByTable().get(normalizeTableName(tableName));
+			if (visibleColumns == null) {
+				return null;
+			}
+			Map<String, Object> restriction = new LinkedHashMap<>();
+			restriction.put("tableName", tableName);
+			restriction.put("allowedColumns", visibleColumns);
+			return restriction;
+		}).filter(Objects::nonNull).toList();
 		if (!columnRestrictions.isEmpty()) {
 			permissions.put("columnRestrictions", columnRestrictions);
 		}
 		return permissions;
 	}
 
-	private Map<String, Object> buildStatsSummary(int returnedRows, Integer limit, boolean truncated, String scanStatus) {
+	private Map<String, Object> buildStatsSummary(int returnedRows, Integer limit, boolean truncated,
+			String scanStatus) {
 		Map<String, Object> stats = new LinkedHashMap<>();
 		stats.put("returnedRows", returnedRows);
 		if (limit != null) {
@@ -1021,8 +1024,7 @@ public class DatasourceExplorerService {
 	}
 
 	private record UnifiedRelation(String sourceTable, String sourceColumn, String targetTable, String targetColumn,
-			String relationType, String description, String sourceType, boolean virtual,
-			boolean declaredInDatabase) {
+			String relationType, String description, String sourceType, boolean virtual, boolean declaredInDatabase) {
 	}
 
 	private record SqlGuardedQuery(String sql, Set<String> referencedTables, Set<String> allowedResultHeaders) {
@@ -1098,14 +1100,16 @@ public class DatasourceExplorerService {
 			validateExpression(plainSelect.getHaving(), scope, cteNames, "HAVING", selectAliases);
 			validateExpression(plainSelect.getQualify(), scope, cteNames, "QUALIFY", selectAliases);
 			if (plainSelect.getGroupBy() != null && plainSelect.getGroupBy().getGroupByExpressions() != null) {
-				for (Object groupByExpression : Optional.ofNullable(plainSelect.getGroupBy().getGroupByExpressions().getExpressions())
+				for (Object groupByExpression : Optional
+					.ofNullable(plainSelect.getGroupBy().getGroupByExpressions().getExpressions())
 					.orElse(List.of())) {
 					if (groupByExpression instanceof Expression expression) {
 						validateExpression(expression, scope, cteNames, "GROUP BY", selectAliases);
 					}
 				}
 			}
-			for (OrderByElement orderByElement : Optional.ofNullable(plainSelect.getOrderByElements()).orElse(List.of())) {
+			for (OrderByElement orderByElement : Optional.ofNullable(plainSelect.getOrderByElements())
+				.orElse(List.of())) {
 				validateExpression(orderByElement.getExpression(), scope, cteNames, "ORDER BY", selectAliases);
 			}
 		}
@@ -1117,11 +1121,13 @@ public class DatasourceExplorerService {
 			for (Join join : Optional.ofNullable(plainSelect.getJoins()).orElse(List.of())) {
 				addFromItemSources(join.getRightItem(), cteNames, referencedTables, sourcesByReference, baseSources);
 				if (join.getUsingColumns() != null && !join.getUsingColumns().isEmpty()) {
-					throw new IllegalArgumentException("当前 SQL 使用了 JOIN ... USING 语法。字段级可见性校验要求改写成显式 ON alias.column = alias.column");
+					throw new IllegalArgumentException(
+							"当前 SQL 使用了 JOIN ... USING 语法。字段级可见性校验要求改写成显式 ON alias.column = alias.column");
 				}
 				for (Expression onExpression : Optional.ofNullable(join.getOnExpressions()).orElse(List.of())) {
-					validateExpression(onExpression, new SelectScope(Map.copyOf(sourcesByReference), List.copyOf(baseSources)),
-							cteNames, "JOIN ON", Set.of());
+					validateExpression(onExpression,
+							new SelectScope(Map.copyOf(sourcesByReference), List.copyOf(baseSources)), cteNames,
+							"JOIN ON", Set.of());
 				}
 			}
 			return new SelectScope(Map.copyOf(sourcesByReference), List.copyOf(baseSources));
@@ -1142,8 +1148,9 @@ public class DatasourceExplorerService {
 				}
 				String resolvedTableName = resolveVisibleTableName(context, extractTableReference(table));
 				referencedTables.add(normalizeTableName(resolvedTableName));
-				SourceBinding sourceBinding = new SourceBinding(StringUtils.defaultIfBlank(aliasName,
-						normalizeTableName(resolvedTableName)), resolvedTableName);
+				SourceBinding sourceBinding = new SourceBinding(
+						StringUtils.defaultIfBlank(aliasName, normalizeTableName(resolvedTableName)),
+						resolvedTableName);
 				registerSource(sourcesByReference, sourceBinding);
 				registerSource(sourcesByReference,
 						new SourceBinding(normalizeTableName(resolvedTableName), resolvedTableName));
@@ -1167,19 +1174,23 @@ public class DatasourceExplorerService {
 			if (fromItem instanceof ParenthesedFromItem parenthesedFromItem) {
 				Map<String, SourceBinding> nestedSources = new LinkedHashMap<>();
 				List<SourceBinding> nestedBaseSources = new ArrayList<>();
-				addFromItemSources(parenthesedFromItem.getFromItem(), cteNames, referencedTables, nestedSources, nestedBaseSources);
+				addFromItemSources(parenthesedFromItem.getFromItem(), cteNames, referencedTables, nestedSources,
+						nestedBaseSources);
 				for (Join join : Optional.ofNullable(parenthesedFromItem.getJoins()).orElse(List.of())) {
-					addFromItemSources(join.getRightItem(), cteNames, referencedTables, nestedSources, nestedBaseSources);
+					addFromItemSources(join.getRightItem(), cteNames, referencedTables, nestedSources,
+							nestedBaseSources);
 					if (join.getUsingColumns() != null && !join.getUsingColumns().isEmpty()) {
-						throw new IllegalArgumentException("当前 SQL 使用了 JOIN ... USING 语法。字段级可见性校验要求改写成显式 ON alias.column = alias.column");
+						throw new IllegalArgumentException(
+								"当前 SQL 使用了 JOIN ... USING 语法。字段级可见性校验要求改写成显式 ON alias.column = alias.column");
 					}
 					for (Expression onExpression : Optional.ofNullable(join.getOnExpressions()).orElse(List.of())) {
 						validateExpression(onExpression,
-								new SelectScope(Map.copyOf(nestedSources), List.copyOf(nestedBaseSources)),
-								cteNames, "JOIN ON", Set.of());
+								new SelectScope(Map.copyOf(nestedSources), List.copyOf(nestedBaseSources)), cteNames,
+								"JOIN ON", Set.of());
 					}
 				}
-				if (parenthesedFromItem.getAlias() != null && StringUtils.isNotBlank(parenthesedFromItem.getAlias().getName())) {
+				if (parenthesedFromItem.getAlias() != null
+						&& StringUtils.isNotBlank(parenthesedFromItem.getAlias().getName())) {
 					registerDerivedSource(parenthesedFromItem, sourcesByReference);
 				}
 				else {
@@ -1199,14 +1210,16 @@ public class DatasourceExplorerService {
 			if (fromItem.getAlias() == null || StringUtils.isBlank(fromItem.getAlias().getName())) {
 				return;
 			}
-			registerSource(sourcesByReference, new SourceBinding(normalizeTableName(fromItem.getAlias().getName()), null));
+			registerSource(sourcesByReference,
+					new SourceBinding(normalizeTableName(fromItem.getAlias().getName()), null));
 		}
 
 		private void registerSource(Map<String, SourceBinding> sourcesByReference, SourceBinding sourceBinding) {
 			SourceBinding existingBinding = sourcesByReference.get(sourceBinding.referenceName());
 			if (existingBinding != null && !Objects.equals(existingBinding.tableName(), sourceBinding.tableName())) {
-				throw new IllegalArgumentException("Table reference '%s' is ambiguous in current SQL scope; please use aliases"
-					.formatted(sourceBinding.referenceName()));
+				throw new IllegalArgumentException(
+						"Table reference '%s' is ambiguous in current SQL scope; please use aliases"
+							.formatted(sourceBinding.referenceName()));
 			}
 			sourcesByReference.put(sourceBinding.referenceName(), sourceBinding);
 		}
@@ -1221,7 +1234,7 @@ public class DatasourceExplorerService {
 				public void visit(Function function) {
 					if (function.isAllColumns() && !"count".equalsIgnoreCase(function.getName())) {
 						throw new IllegalArgumentException("子句 %s 中检测到 %s(*)。字段级可见性校验禁止使用除 COUNT(*) 外的星号聚合，请显式列出字段"
-								.formatted(clause, StringUtils.defaultIfBlank(function.getName(), "function")));
+							.formatted(clause, StringUtils.defaultIfBlank(function.getName(), "function")));
 					}
 					super.visit(function);
 				}
@@ -1254,13 +1267,15 @@ public class DatasourceExplorerService {
 			});
 		}
 
-		private void validateColumnReference(SelectScope scope, String clause, Column column, Set<String> allowedAliases) {
+		private void validateColumnReference(SelectScope scope, String clause, Column column,
+				Set<String> allowedAliases) {
 			String normalizedColumnName = normalizeColumnName(column.getColumnName());
 			if (StringUtils.isBlank(normalizedColumnName)) {
 				throw new IllegalArgumentException("子句 %s 中存在无法识别的字段引用: %s".formatted(clause, column));
 			}
 			Table table = column.getTable();
-			String tableReference = table == null ? StringUtils.EMPTY : normalizeTableName(extractTableReference(table));
+			String tableReference = table == null ? StringUtils.EMPTY
+					: normalizeTableName(extractTableReference(table));
 			if (StringUtils.isBlank(tableReference)) {
 				if (allowedAliases.contains(normalizedColumnName)) {
 					return;
@@ -1269,9 +1284,8 @@ public class DatasourceExplorerService {
 					return;
 				}
 				if (scope.baseSources().size() > 1) {
-					throw new IllegalArgumentException(
-							"子句 %s 中的字段 '%s' 没有带表前缀。当前 SQL 涉及多张基础表，无法安全判断字段归属，请改成 alias.%s"
-								.formatted(clause, column.getColumnName(), column.getColumnName()));
+					throw new IllegalArgumentException("子句 %s 中的字段 '%s' 没有带表前缀。当前 SQL 涉及多张基础表，无法安全判断字段归属，请改成 alias.%s"
+						.formatted(clause, column.getColumnName(), column.getColumnName()));
 				}
 				SourceBinding sourceBinding = scope.baseSources().get(0);
 				assertVisibleColumn(sourceBinding.tableName(), column.getColumnName(), clause, column.toString());
@@ -1295,13 +1309,13 @@ public class DatasourceExplorerService {
 			}
 			Set<String> visibleColumns = context.visibleColumnNameSetByTable().get(normalizedTableName);
 			if (visibleColumns == null || !visibleColumns.contains(normalizeColumnName(columnName))) {
-				String visibleColumnSummary = Optional.ofNullable(context.visibleColumnsByTable().get(normalizedTableName))
+				String visibleColumnSummary = Optional
+					.ofNullable(context.visibleColumnsByTable().get(normalizedTableName))
 					.orElse(List.of())
 					.stream()
 					.collect(Collectors.joining(", "));
-				throw new IllegalArgumentException(
-						"子句 %s 中的字段引用 '%s' 不被允许。表 '%s' 已启用字段级可见性控制，仅允许字段: [%s]"
-							.formatted(clause, expression, tableName, visibleColumnSummary));
+				throw new IllegalArgumentException("子句 %s 中的字段引用 '%s' 不被允许。表 '%s' 已启用字段级可见性控制，仅允许字段: [%s]"
+					.formatted(clause, expression, tableName, visibleColumnSummary));
 			}
 		}
 
@@ -1345,6 +1359,7 @@ public class DatasourceExplorerService {
 			}
 			return table == null ? StringUtils.EMPTY : table.getName();
 		}
+
 	}
 
 }

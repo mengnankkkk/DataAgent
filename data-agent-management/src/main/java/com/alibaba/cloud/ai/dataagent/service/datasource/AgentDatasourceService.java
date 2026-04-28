@@ -41,8 +41,8 @@ public interface AgentDatasourceService {
 
 	AgentDatasource updateDatasourceTables(Long agentId, Integer datasourceId, List<String> tables);
 
-	AgentDatasource updateDatasourceColumns(Long agentId, Integer datasourceId, Map<String, List<String>> columnsByTable)
-			throws Exception;
+	AgentDatasource updateDatasourceColumns(Long agentId, Integer datasourceId,
+			Map<String, List<String>> columnsByTable) throws Exception;
 
 	List<String> getVisibleTableColumns(Long agentId, Integer datasourceId, String tableName) throws Exception;
 

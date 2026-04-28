@@ -44,7 +44,9 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	public ApiResponse<Object> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-		String message = buildValidationMessage(e.getBindingResult().getFieldErrors().stream()
+		String message = buildValidationMessage(e.getBindingResult()
+			.getFieldErrors()
+			.stream()
 			.map(error -> error.getField() + ": " + error.getDefaultMessage())
 			.collect(Collectors.toList()));
 		log.warn("Method argument not valid: {}", message);
@@ -54,7 +56,8 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(WebExchangeBindException.class)
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	public ApiResponse<Object> handleWebExchangeBindException(WebExchangeBindException e) {
-		String message = buildValidationMessage(e.getFieldErrors().stream()
+		String message = buildValidationMessage(e.getFieldErrors()
+			.stream()
 			.map(error -> error.getField() + ": " + error.getDefaultMessage())
 			.collect(Collectors.toList()));
 		log.warn("Web exchange bind not valid: {}", message);
@@ -76,7 +79,9 @@ public class GlobalExceptionHandler {
 	}
 
 	private String buildValidationMessage(java.util.List<String> messages) {
-		String message = messages.stream().filter(item -> item != null && !item.isBlank()).collect(Collectors.joining("; "));
+		String message = messages.stream()
+			.filter(item -> item != null && !item.isBlank())
+			.collect(Collectors.joining("; "));
 		if (message.isBlank()) {
 			return "Request validation failed";
 		}

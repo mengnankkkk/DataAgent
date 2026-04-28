@@ -46,4 +46,5 @@ class SqlGuardCheckRequest {
 	String normalizedAction() {
 		return StringUtils.defaultIfBlank(action, "SQL_VERIFY").trim().toUpperCase();
 	}
+
 }

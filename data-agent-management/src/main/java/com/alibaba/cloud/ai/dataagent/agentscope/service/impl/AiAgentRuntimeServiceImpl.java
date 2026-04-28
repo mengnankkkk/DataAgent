@@ -236,7 +236,8 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 				Agent managedAgentConfig = resolveManagedAgent(request.getAgentId());
 				ModelConfigDTO modelConfig = modelConfigDataService.getActiveConfigByType(ModelType.CHAT);
 				validateModelConfig(modelConfig);
-				Map<String, ToolCallback> toolCallbacks = agentScopeToolkitFactory.getToolCallbacks(request.getAgentId());
+				Map<String, ToolCallback> toolCallbacks = agentScopeToolkitFactory
+					.getToolCallbacks(request.getAgentId());
 				Model model = agentScopeModelFactory.create(dynamicModelFactory.createChatModel(modelConfig),
 						modelConfig.getModelName(), toolCallbacks);
 				ManagedAgent managedAgent = managedAgentRegistry.getRequired();
@@ -245,8 +246,8 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 				Msg response;
 				try {
 					response = managedAgent.run(new AgentRunContext(request.getAgentId(), request.getThreadId(), model,
-							resolveManagedSystemPrompt(managedAgentConfig, request.getAgentId()), buildUserPrompt(request),
-							AgentRuntimeConstant.AGENT_CALL_TIMEOUT, runtimeExtensions));
+							resolveManagedSystemPrompt(managedAgentConfig, request.getAgentId()),
+							buildUserPrompt(request), AgentRuntimeConstant.AGENT_CALL_TIMEOUT, runtimeExtensions));
 				}
 				catch (RuntimeException ex) {
 					if (sessionRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())
@@ -296,7 +297,8 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		if (rootSpan == null) {
 			return;
 		}
-		rootSpan.setStatus(StatusCode.ERROR, throwable.getMessage() == null ? "runtime failed" : throwable.getMessage());
+		rootSpan.setStatus(StatusCode.ERROR,
+				throwable.getMessage() == null ? "runtime failed" : throwable.getMessage());
 		rootSpan.recordException(throwable);
 	}
 
@@ -326,19 +328,20 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		if (rootSpan == null || request == null) {
 			return;
 		}
-		answerTraceExplainStore.getMirrorSummary(request.getThreadId(), request.getRuntimeRequestId()).ifPresent(summary -> {
-			rootSpan.setAttribute("dataagent.answer.explain.available", true);
-			rootSpan.setAttribute("dataagent.answer.explain.tool_step_count", summary.getToolStepCount());
-			rootSpan.setAttribute("dataagent.answer.explain.semantic_hit_count", summary.getSemanticHitCount());
-			rootSpan.setAttribute("dataagent.answer.explain.knowledge_hit_count", summary.getKnowledgeHitCount());
-			if (StringUtils.hasText(summary.getDatasource())) {
-				rootSpan.setAttribute("dataagent.answer.explain.datasource", summary.getDatasource());
-			}
-			if (summary.getUsedTables() != null && !summary.getUsedTables().isEmpty()) {
-				rootSpan.setAttribute("dataagent.answer.explain.used_tables",
-						String.join(",", summary.getUsedTables()));
-			}
-		});
+		answerTraceExplainStore.getMirrorSummary(request.getThreadId(), request.getRuntimeRequestId())
+			.ifPresent(summary -> {
+				rootSpan.setAttribute("dataagent.answer.explain.available", true);
+				rootSpan.setAttribute("dataagent.answer.explain.tool_step_count", summary.getToolStepCount());
+				rootSpan.setAttribute("dataagent.answer.explain.semantic_hit_count", summary.getSemanticHitCount());
+				rootSpan.setAttribute("dataagent.answer.explain.knowledge_hit_count", summary.getKnowledgeHitCount());
+				if (StringUtils.hasText(summary.getDatasource())) {
+					rootSpan.setAttribute("dataagent.answer.explain.datasource", summary.getDatasource());
+				}
+				if (summary.getUsedTables() != null && !summary.getUsedTables().isEmpty()) {
+					rootSpan.setAttribute("dataagent.answer.explain.used_tables",
+							String.join(",", summary.getUsedTables()));
+				}
+			});
 	}
 
 	private void persistAnswerExplainSnapshot(GraphRequest request) {
@@ -500,7 +503,8 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 			if (!StringUtils.hasText(existingText) || !StringUtils.hasText(candidate)) {
 				return false;
 			}
-			return existingText.equals(candidate) || existingText.endsWith(candidate) || candidate.endsWith(existingText);
+			return existingText.equals(candidate) || existingText.endsWith(candidate)
+					|| candidate.endsWith(existingText);
 		}
 
 		private String normalize(String text) {

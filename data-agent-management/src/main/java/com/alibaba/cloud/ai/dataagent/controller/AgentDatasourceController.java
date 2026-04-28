@@ -70,7 +70,8 @@ public class AgentDatasourceController {
 				throw new InvalidInputException("tables cannot be empty");
 			}
 
-			Boolean result = agentDatasourceService.initializeSchemaForAgentWithDatasource(agentId, datasourceId, tables);
+			Boolean result = agentDatasourceService.initializeSchemaForAgentWithDatasource(agentId, datasourceId,
+					tables);
 			if (Boolean.TRUE.equals(result)) {
 				log.info("Successfully initialized schema for agent: {}, tables: {}", agentId, tables.size());
 				return ApiResponse.success("Schema initialized successfully");
@@ -136,8 +137,8 @@ public class AgentDatasourceController {
 			@RequestBody @Validated UpdateDatasourceTablesDTO dto) {
 		try {
 			dto.setTables(Optional.ofNullable(dto.getTables()).orElse(List.of()));
-			AgentDatasource agentDatasource = agentDatasourceService.updateDatasourceTables(agentId, dto.getDatasourceId(),
-					dto.getTables());
+			AgentDatasource agentDatasource = agentDatasourceService.updateDatasourceTables(agentId,
+					dto.getDatasourceId(), dto.getTables());
 			return ApiResponse.success("Update successful", agentDatasource);
 		}
 		catch (IllegalArgumentException e) {
@@ -164,8 +165,8 @@ public class AgentDatasourceController {
 				columnsByTable.put(tableSelection.getTableName(),
 						Optional.ofNullable(tableSelection.getColumns()).orElse(List.of()));
 			}
-			AgentDatasource agentDatasource = agentDatasourceService.updateDatasourceColumns(agentId, dto.getDatasourceId(),
-					columnsByTable);
+			AgentDatasource agentDatasource = agentDatasourceService.updateDatasourceColumns(agentId,
+					dto.getDatasourceId(), columnsByTable);
 			return ApiResponse.success("Update successful", agentDatasource);
 		}
 		catch (IllegalArgumentException e) {
@@ -180,8 +181,8 @@ public class AgentDatasourceController {
 	}
 
 	@GetMapping("/{datasourceId}/tables/{tableName}/columns")
-	public ApiResponse<List<String>> getVisibleTableColumns(@PathVariable Long agentId, @PathVariable Integer datasourceId,
-			@PathVariable String tableName) {
+	public ApiResponse<List<String>> getVisibleTableColumns(@PathVariable Long agentId,
+			@PathVariable Integer datasourceId, @PathVariable String tableName) {
 		try {
 			List<String> columns = agentDatasourceService.getVisibleTableColumns(agentId, datasourceId, tableName);
 			return ApiResponse.success("success", columns);

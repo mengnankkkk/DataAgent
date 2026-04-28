@@ -195,8 +195,8 @@ public interface SemanticModelMapper {
 			LIMIT 1
 			""")
 	SemanticModel selectByAgentIdAndDatasourceIdAndTableNameAndColumnName(@Param("agentId") Long agentId,
-			@Param("datasourceId") Integer datasourceId,
-			@Param("tableName") String tableName, @Param("columnName") String columnName);
+			@Param("datasourceId") Integer datasourceId, @Param("tableName") String tableName,
+			@Param("columnName") String columnName);
 
 	@Delete("""
 			DELETE FROM semantic_model

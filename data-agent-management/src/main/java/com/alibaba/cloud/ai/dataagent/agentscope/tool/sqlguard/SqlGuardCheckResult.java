@@ -65,4 +65,5 @@ class SqlGuardCheckResult {
 
 	@Builder.Default
 	private List<Map<String, Object>> columnProfiles = new ArrayList<>();
+
 }

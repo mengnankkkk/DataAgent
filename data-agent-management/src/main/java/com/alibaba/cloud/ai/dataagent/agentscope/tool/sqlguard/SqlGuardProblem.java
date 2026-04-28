@@ -22,22 +22,22 @@ import lombok.Data;
 @Builder
 class SqlGuardProblem {
 
-    private String code;
+	private String code;
 
-    private String title;
+	private String title;
 
-    private String severity;
+	private String severity;
 
-    private String message;
+	private String message;
 
-    private String why;
+	private String why;
 
-    private String expected;
+	private String expected;
 
-    private String actual;
+	private String actual;
 
-    private String evidence;
+	private String evidence;
 
-    private String repairHint;
+	private String repairHint;
 
 }
