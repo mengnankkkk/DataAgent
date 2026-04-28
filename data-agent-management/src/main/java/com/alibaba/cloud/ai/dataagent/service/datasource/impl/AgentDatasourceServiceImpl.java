@@ -250,7 +250,7 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
 		}
 		AgentDatasource agentDatasource = agentDatasourceMapper.selectByAgentIdAndDatasourceId(agentId, datasourceId);
 		if (agentDatasource == null) {
-			throw new IllegalArgumentException("鏈壘鍒板搴旂殑鏁版嵁婧愬叧鑱旇褰?");
+			throw new IllegalArgumentException("未找到对应的数据源关联记录");
 		}
 		TableResolutionIndex allowedTables = loadAllowedTables(agentDatasource, datasourceId);
 		String actualTableName = resolveTableName(tableName, allowedTables, false);
