@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.chat;
 
+import com.alibaba.cloud.ai.dataagent.constant.AgentSessionConstant;
 import com.alibaba.cloud.ai.dataagent.vo.SessionUpdateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.codec.ServerSentEvent;
@@ -23,7 +24,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import reactor.core.publisher.SignalType;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,7 +40,8 @@ public class SessionEventPublisher {
 
 	public Flux<ServerSentEvent<SessionUpdateEvent>> register(Integer agentId) {
 		AgentSessionSink sink = sinks.computeIfAbsent(agentId, id -> new AgentSessionSink());
-		Flux<ServerSentEvent<SessionUpdateEvent>> heartbeat = Flux.interval(Duration.ofSeconds(2))
+		Flux<ServerSentEvent<SessionUpdateEvent>> heartbeat = Flux
+			.interval(AgentSessionConstant.SESSION_EVENT_HEARTBEAT_INTERVAL)
 			.map(i -> ServerSentEvent.<SessionUpdateEvent>builder().comment("heartbeat").build());
 		sink.increment();
 		log.debug("Registered subscriber for agent {}, current count: {}", agentId, sink.subscribers.get());

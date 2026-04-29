@@ -15,12 +15,33 @@
  */
 package com.alibaba.cloud.ai.dataagent.constant;
 
+import io.agentscope.core.model.ExecutionConfig;
 import java.time.Duration;
 
 /**
  * AgentScope 运行时共享的默认配置常量，集中维护避免散落在多个实现类中。
  */
 public final class AgentRuntimeConstant {
+
+	public static final int REACT_AGENT_DEFAULT_MAX_ITERS = 10;
+
+	public static final Duration MODEL_EXECUTION_TIMEOUT = Duration.ofMinutes(2);
+
+	public static final int MODEL_MAX_ATTEMPTS = 2;
+
+	public static final Duration TOOL_EXECUTION_TIMEOUT = Duration.ofSeconds(30);
+
+	public static final int TOOL_MAX_ATTEMPTS = 1;
+
+	public static final ExecutionConfig DEFAULT_MODEL_EXECUTION_CONFIG = ExecutionConfig.builder()
+		.timeout(MODEL_EXECUTION_TIMEOUT)
+		.maxAttempts(MODEL_MAX_ATTEMPTS)
+		.build();
+
+	public static final ExecutionConfig DEFAULT_TOOL_EXECUTION_CONFIG = ExecutionConfig.builder()
+		.timeout(TOOL_EXECUTION_TIMEOUT)
+		.maxAttempts(TOOL_MAX_ATTEMPTS)
+		.build();
 
 	private AgentRuntimeConstant() {
 

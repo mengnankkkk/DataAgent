@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.dataagent.service.chat;
 
 import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentScopeNativeSessionService;
+import com.alibaba.cloud.ai.dataagent.constant.AgentSessionConstant;
 import com.alibaba.cloud.ai.dataagent.entity.ChatSession;
 import com.alibaba.cloud.ai.dataagent.mapper.ChatSessionMapper;
 import java.time.LocalDateTime;
@@ -66,7 +67,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 	public ChatSession createSession(Integer agentId, String title, Long userId) {
 		String sessionId = UUID.randomUUID().toString();
 
-		ChatSession session = new ChatSession(sessionId, agentId, title != null ? title : "新会话", "active", userId);
+		ChatSession session = new ChatSession(sessionId, agentId,
+				title != null ? title : AgentSessionConstant.DEFAULT_SESSION_TITLE, "active", userId);
 		chatSessionMapper.insert(session);
 
 		log.info("Created new chat session: {} for agent: {}", sessionId, agentId);

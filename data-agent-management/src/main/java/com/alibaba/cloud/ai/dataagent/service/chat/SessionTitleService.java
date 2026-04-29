@@ -15,6 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.chat;
 
+import com.alibaba.cloud.ai.dataagent.constant.AgentSessionConstant;
 import com.alibaba.cloud.ai.dataagent.entity.ChatSession;
 import com.alibaba.cloud.ai.dataagent.service.llm.LlmService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
-import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,8 +37,6 @@ import java.util.concurrent.ExecutorService;
 @Service
 @RequiredArgsConstructor
 public class SessionTitleService {
-
-	private static final String DEFAULT_TITLE = "新会话";
 
 	private final ChatSessionService chatSessionService;
 
@@ -94,20 +92,21 @@ public class SessionTitleService {
 	}
 
 	private boolean hasCustomTitle(ChatSession session) {
-		return StringUtils.hasText(session.getTitle()) && !DEFAULT_TITLE.equals(session.getTitle());
+		return StringUtils.hasText(session.getTitle())
+				&& !AgentSessionConstant.DEFAULT_SESSION_TITLE.equals(session.getTitle());
 	}
 
 	private String requestSummary(String userMessage) {
 		try {
 			String systemPrompt = """
-					你是一名对话助手，请根据用户的第一条输入生成不超过20个字的会话标题。
+					你是一名对话助手，请根据用户的第一条输入生成不超过%d个字的会话标题。
 					使用中文输出，避免使用标点或引号，仅保留核心主题。
-					""";
+					""".formatted(AgentSessionConstant.SESSION_TITLE_MAX_LENGTH);
 			String userPrompt = "用户输入：" + userMessage;
 			Flux<String> responseFlux = llmService.toStringFlux(llmService.call(systemPrompt, userPrompt));
 			return responseFlux.collect(StringBuilder::new, StringBuilder::append)
 				.map(StringBuilder::toString)
-				.block(Duration.ofSeconds(15));
+				.block(AgentSessionConstant.SESSION_TITLE_GENERATION_TIMEOUT);
 		}
 		catch (Exception ex) {
 			log.warn("LLM title generation failed: {}", ex.getMessage());
@@ -120,18 +119,18 @@ public class SessionTitleService {
 			return null;
 		}
 		String sanitized = raw.replaceAll("[\\r\\n]+", " ").replaceAll("[\"“”]+", "").trim();
-		if (sanitized.length() > 20) {
-			sanitized = sanitized.substring(0, 20);
+		if (sanitized.length() > AgentSessionConstant.SESSION_TITLE_MAX_LENGTH) {
+			sanitized = sanitized.substring(0, AgentSessionConstant.SESSION_TITLE_MAX_LENGTH);
 		}
 		return sanitized;
 	}
 
 	private String fallbackTitle(String userMessage) {
 		String text = userMessage.replaceAll("\\s+", " ").trim();
-		if (text.length() > 20) {
-			text = text.substring(0, 20);
+		if (text.length() > AgentSessionConstant.SESSION_TITLE_MAX_LENGTH) {
+			text = text.substring(0, AgentSessionConstant.SESSION_TITLE_MAX_LENGTH);
 		}
-		return StringUtils.hasText(text) ? text : DEFAULT_TITLE;
+		return StringUtils.hasText(text) ? text : AgentSessionConstant.DEFAULT_SESSION_TITLE;
 	}
 
 }

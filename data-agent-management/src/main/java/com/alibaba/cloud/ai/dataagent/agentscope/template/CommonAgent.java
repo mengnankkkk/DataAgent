@@ -21,7 +21,6 @@ import io.agentscope.core.ReActAgent;
 import io.agentscope.core.hook.Hook;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
-import io.agentscope.core.model.ExecutionConfig;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -34,18 +33,6 @@ public class CommonAgent implements ManagedAgent {
 	public static final String AGENT_TYPE = "commonagent";
 
 	private static final String SYSTEM_PROMPT = PromptLoader.loadPrompt(AGENT_TYPE, "md");
-
-	private static final int DEFAULT_MAX_ITERS = 10;
-
-	private static final ExecutionConfig DEFAULT_MODEL_EXECUTION_CONFIG = ExecutionConfig.builder()
-		.timeout(Duration.ofMinutes(2))
-		.maxAttempts(2)
-		.build();
-
-	private static final ExecutionConfig DEFAULT_TOOL_EXECUTION_CONFIG = ExecutionConfig.builder()
-		.timeout(Duration.ofSeconds(30))
-		.maxAttempts(1)
-		.build();
 
 	@Override
 	public String getAgentType() {
@@ -61,9 +48,9 @@ public class CommonAgent implements ManagedAgent {
 			.name(AGENT_TYPE)
 			.sysPrompt(defaultSystemPrompt(context.systemPrompt(), extensions.skillInstructions()))
 			.model(context.model())
-			.maxIters(DEFAULT_MAX_ITERS)
-			.modelExecutionConfig(DEFAULT_MODEL_EXECUTION_CONFIG)
-			.toolExecutionConfig(DEFAULT_TOOL_EXECUTION_CONFIG);
+			.maxIters(AgentRuntimeConstant.REACT_AGENT_DEFAULT_MAX_ITERS)
+			.modelExecutionConfig(AgentRuntimeConstant.DEFAULT_MODEL_EXECUTION_CONFIG)
+			.toolExecutionConfig(AgentRuntimeConstant.DEFAULT_TOOL_EXECUTION_CONFIG);
 		if (extensions.toolkit() != null) {
 			builder.toolkit(extensions.toolkit());
 		}
