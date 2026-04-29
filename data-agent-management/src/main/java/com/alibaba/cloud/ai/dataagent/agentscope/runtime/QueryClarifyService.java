@@ -56,10 +56,11 @@ public class QueryClarifyService {
 
 	private static final Pattern STATIC_ANALYSIS_PATTERN = Pattern.compile("(库存|价格|单价|成本|邮箱|用户名|分类|状态值|字段|列|表结构)");
 
-	public QueryClarifyAssessment assess(@Nullable String query, @Nullable String humanFeedbackContent) {
+	public QueryClarifyAssessment assess(@Nullable String query, @Nullable String humanFeedbackContent,
+			boolean clarifyCheckEnabled) {
 		String normalizedQuery = normalize(query);
 		String normalizedFeedback = normalize(humanFeedbackContent);
-		if (!StringUtils.hasText(normalizedQuery)) {
+		if (!clarifyCheckEnabled || !StringUtils.hasText(normalizedQuery)) {
 			return QueryClarifyAssessment.low(normalizedQuery, normalizedFeedback);
 		}
 		String evidenceText = normalizedQuery

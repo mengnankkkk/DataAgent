@@ -19,6 +19,7 @@ export interface AgentRequest {
   threadId?: string;
   runtimeRequestId?: string;
   query: string;
+  clarifyCheckEnabled?: boolean;
   humanFeedback?: boolean;
   humanFeedbackContent?: string;
   rejectedPlan: boolean;
@@ -82,6 +83,7 @@ class GraphService {
       params.append('runtimeRequestId', request.runtimeRequestId);
     }
     params.append('query', request.query);
+    params.append('clarifyCheckEnabled', String(Boolean(request.clarifyCheckEnabled)));
     if (request.humanFeedback) {
       params.append('humanFeedback', request.humanFeedback.toString());
     }

@@ -53,6 +53,7 @@ public class DataAgentController {
                                                              @RequestParam("threadId") String threadId,
                                                              @RequestParam(value = "runtimeRequestId", required = false) String runtimeRequestId,
                                                              @RequestParam("query") String query,
+                                                             @RequestParam(value = "clarifyCheckEnabled", required = false) boolean clarifyCheckEnabled,
                                                              @RequestParam(value = "humanFeedback", required = false) boolean humanFeedback,
                                                              @RequestParam(value = "humanFeedbackContent", required = false) String humanFeedbackContent,
                                                              @RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan, ServerHttpResponse response) {
@@ -68,6 +69,7 @@ public class DataAgentController {
 			.threadId(threadId)
 			.runtimeRequestId(runtimeRequestId)
 			.query(query)
+			.clarifyCheckEnabled(clarifyCheckEnabled)
 			.humanFeedback(humanFeedback)
 			.humanFeedbackContent(humanFeedbackContent)
 			.rejectedPlan(rejectedPlan)

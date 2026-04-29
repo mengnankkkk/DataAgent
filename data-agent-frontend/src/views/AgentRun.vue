@@ -215,6 +215,13 @@
               />
               <div class="switch-group">
                 <div class="switch-item">
+                  <span class="switch-label">开始澄清校验</span>
+                  <el-switch
+                    v-model="requestOptions.clarifyCheckEnabled"
+                    :disabled="isStreaming || isSubmittingMessage"
+                  />
+                </div>
+                <div class="switch-item">
                   <span class="switch-label">每页数量</span>
                   <el-select
                     v-model="resultSetPageSize"
@@ -1093,6 +1100,7 @@
       });
       const requestOptions = ref({
         reportFormat: 'markdown' as 'markdown' | 'html', // 'markdown' | 'html'，控制报告展示方式
+        clarifyCheckEnabled: false,
       });
       const showReportFullscreen = ref(false);
       const fullscreenReportContent = ref('');
@@ -1294,6 +1302,7 @@
           const request: AgentRequest = {
             agentId: String(requireResolvedAgentId()),
             query: requestQuery,
+            clarifyCheckEnabled: requestOptions.value.clarifyCheckEnabled,
             humanFeedback: Boolean(activeClarify),
             humanFeedbackContent: feedbackContent,
             rejectedPlan: false,

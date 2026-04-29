@@ -225,9 +225,12 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 					rootSpan.setStatus(StatusCode.OK, "cancelled");
 					return "";
 				}
+				boolean clarifyCheckEnabled = request.isClarifyCheckEnabled()
+						|| StringUtils.hasText(request.getHumanFeedbackContent());
 				QueryClarifyAssessment clarifyAssessment = queryClarifyService.assess(request.getQuery(),
-						request.getHumanFeedbackContent());
+						request.getHumanFeedbackContent(), clarifyCheckEnabled);
 				answerTraceExplainStore.recordClarifyAssessment(request, clarifyAssessment);
+				rootSpan.setAttribute("dataagent.query_clarify.enabled", clarifyCheckEnabled);
 				rootSpan.setAttribute("dataagent.query_clarify.risk_level", clarifyAssessment.riskLevel().value());
 				rootSpan.setAttribute("dataagent.query_clarify.blocked", clarifyAssessment.shouldBlockExecution());
 				if (clarifyAssessment.shouldBlockExecution()) {

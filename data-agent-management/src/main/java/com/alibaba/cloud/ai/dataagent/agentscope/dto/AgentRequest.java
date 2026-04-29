@@ -34,6 +34,8 @@ public class AgentRequest {
 
 	private String query;
 
+	private boolean clarifyCheckEnabled;
+
 	private boolean humanFeedback;
 
 	private String humanFeedbackContent;
