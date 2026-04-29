@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AgentSessionRegistry {
+public class AgentRuntimeRegistry {
 
 	private final ConcurrentHashMap<String, ConcurrentHashMap<String, RequestExecutionState>> requestStatesByThreadId = new ConcurrentHashMap<>();
 

@@ -22,8 +22,6 @@ import reactor.core.publisher.Sinks;
 
 public interface AgentService {
 
-	String nl2sql(String naturalQuery, String agentId);
-
 	void graphStreamProcess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest agentRequest);
 
 	void stopStreamProcessing(String threadId, String runtimeRequestId);

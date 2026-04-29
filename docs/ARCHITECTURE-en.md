@@ -527,9 +527,9 @@ sequenceDiagram
 
 #### Key Points
 
-- **MCP**: `McpServerService` provides NL2SQL and Agent list tools, using Mcp Server Boot Starter
+- **MCP**: `McpServerService` provides the Agent list tool, using Mcp Server Boot Starter
 - **Multi-Model Scheduling**: `ModelConfig*` configures models, `AiModelRegistry` caches current Chat/Embedding models and supports hot-swapping (only one active model per type at a time)
-- **Built-in Tools**: `nl2SqlToolCallback`, `listAgentsToolCallback`
+- **Built-in Tools**: `listAgentsToolCallback`
 
 #### Architecture Diagram
 
@@ -586,9 +586,9 @@ sequenceDiagram
   Factory->>OpenAI: build API client
   OpenAI-->>Reg: model ready
 
-  MCP->>McpSvc: call tool nl2SqlToolCallback
-  McpSvc->>GS: nl2sql
-  GS-->>McpSvc: SQL result
+  MCP->>McpSvc: call tool listAgentsToolCallback
+  McpSvc->>AgentMapper: findByConditions
+  AgentMapper-->>McpSvc: agent list
   McpSvc-->>MCP: tool response
 ```
 

@@ -239,23 +239,6 @@ public class DatasourceServiceImpl implements DatasourceService {
 	}
 
 	@Override
-	@Deprecated
-	public List<AgentDatasource> getAgentDatasource(Long agentId) {
-		List<AgentDatasource> adentDatasources = agentDatasourceMapper.selectByAgentIdWithDatasource(agentId);
-
-		// Manually fill in the data source information (since MyBatis Plus does not
-		// directly support complex join query result mapping)
-		for (AgentDatasource agentDatasource : adentDatasources) {
-			if (agentDatasource.getDatasourceId() != null) {
-				Datasource datasource = datasourceMapper.selectById(agentDatasource.getDatasourceId());
-				agentDatasource.setDatasource(datasource);
-			}
-		}
-
-		return adentDatasources;
-	}
-
-	@Override
 	public List<String> getDatasourceTables(Integer datasourceId) throws Exception {
 		log.info("Getting tables for datasource: {}", datasourceId);
 

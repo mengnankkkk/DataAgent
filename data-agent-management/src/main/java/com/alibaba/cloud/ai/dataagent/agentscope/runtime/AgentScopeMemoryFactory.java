@@ -15,13 +15,9 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.entity.ChatMessage;
-import com.alibaba.cloud.ai.dataagent.service.chat.ChatMessageService;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentScopeNativeSessionService;
 import io.agentscope.core.memory.InMemoryMemory;
-import io.agentscope.core.memory.Memory;
-import io.agentscope.core.message.Msg;
-import io.agentscope.core.message.MsgRole;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -32,46 +28,21 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class AgentScopeMemoryFactory {
 
-	private static final int MEMORY_MESSAGE_LIMIT = 20;
+	private final AgentScopeNativeSessionService nativeSessionService;
 
-	private final ChatMessageService chatMessageService;
-
-	public Memory create(String threadId) {
+	public PreparedMemory create(AgentRequest request) {
 		InMemoryMemory memory = new InMemoryMemory();
+		String threadId = request == null ? null : request.getThreadId();
 		if (!StringUtils.hasText(threadId)) {
-			return memory;
+			return new PreparedMemory(memory, false);
 		}
-		List<ChatMessage> history = chatMessageService.findRecentBySessionId(threadId, MEMORY_MESSAGE_LIMIT);
-		history.stream().map(this::toMessage).filter(msg -> msg != null).forEach(memory::addMessage);
-		log.debug("Loaded {} history messages into AgentScope memory, threadId={}", history.size(), threadId);
-		return memory;
-	}
-
-	private Msg toMessage(ChatMessage message) {
-		if (message == null || !StringUtils.hasText(message.getContent())) {
-			return null;
+		boolean loadedFromNative = nativeSessionService.loadMemoryIfExists(memory, threadId);
+		if (loadedFromNative) {
+			log.debug("Loaded AgentScope native session memory, threadId={}", threadId);
+			return new PreparedMemory(memory, true);
 		}
-		return Msg.builder()
-			.name(resolveName(message.getRole()))
-			.role(resolveRole(message.getRole()))
-			.textContent(message.getContent())
-			.build();
-	}
-
-	private String resolveName(String role) {
-		return StringUtils.hasText(role) ? role : "user";
-	}
-
-	private MsgRole resolveRole(String role) {
-		if (!StringUtils.hasText(role)) {
-			return MsgRole.USER;
-		}
-		return switch (role.trim().toLowerCase()) {
-			case "assistant" -> MsgRole.ASSISTANT;
-			case "system" -> MsgRole.SYSTEM;
-			case "tool" -> MsgRole.TOOL;
-			default -> MsgRole.USER;
-		};
+		log.debug("No AgentScope native session memory found, threadId={}", threadId);
+		return new PreparedMemory(memory, false);
 	}
 
 }

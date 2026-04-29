@@ -536,9 +536,9 @@ sequenceDiagram
 
 #### 说明要点
 
-- **MCP**: `McpServerService` 提供 NL2SQL 与 Agent 列表工具，使用 Mcp Server Boot Starter
+- **MCP**: `McpServerService` 提供 Agent 列表工具，使用 Mcp Server Boot Starter
 - **多模型调度**: `ModelConfig*` 配置模型，`AiModelRegistry` 缓存当前 Chat/Embedding 模型并支持热切换（同一时间每类仅一个激活模型）
-- **已内置工具**: `nl2SqlToolCallback`、`listAgentsToolCallback`
+- **已内置工具**: `listAgentsToolCallback`
 
 #### 架构图
 
@@ -595,9 +595,9 @@ sequenceDiagram
   Factory->>OpenAI: build API client
   OpenAI-->>Reg: model ready
 
-  MCP->>McpSvc: call tool nl2SqlToolCallback
-  McpSvc->>GS: nl2sql
-  GS-->>McpSvc: SQL result
+  MCP->>McpSvc: call tool listAgentsToolCallback
+  McpSvc->>AgentMapper: findByConditions
+  AgentMapper-->>McpSvc: agent list
   McpSvc-->>MCP: tool response
 ```
 

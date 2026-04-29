@@ -15,7 +15,8 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-public record AgentRuntimeRequestMetadata(String agentId, String threadId, String runtimeRequestId,
-		boolean humanFeedback, String humanFeedbackContent) {
+import io.agentscope.core.memory.InMemoryMemory;
+
+public record PreparedMemory(InMemoryMemory memory, boolean loadedFromNative) {
 
 }

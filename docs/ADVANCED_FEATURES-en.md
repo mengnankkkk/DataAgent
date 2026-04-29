@@ -102,50 +102,7 @@ spring:
 
 ### Available Tools
 
-#### 1. nl2SqlToolCallback
-
-Converts natural language queries to SQL statements.
-
-```json
-{
-  "name": "nl2SqlToolCallback",
-  "description": "Converts natural language queries to SQL statements. Uses the specified agent to convert user's natural language query descriptions into executable SQL statements, supporting complex data query requirements.",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "nl2SqlRequest": {
-        "type": "object",
-        "properties": {
-          "agentId": {
-            "type": "string",
-            "description": "Agent ID, specifies which agent to use for NL2SQL conversion"
-          },
-          "naturalQuery": {
-            "type": "string",
-            "description": "Natural language query description, e.g.: 'Query the top 10 products with highest sales'"
-          }
-        },
-        "required": ["agentId", "naturalQuery"]
-      }
-    },
-    "required": ["nl2SqlRequest"],
-    "additionalProperties": false
-  }
-}
-```
-
-**Usage Example**:
-
-```json
-{
-  "nl2SqlRequest": {
-    "agentId": "agent-123",
-    "naturalQuery": "Query the top 10 products with highest sales in the past 30 days"
-  }
-}
-```
-
-#### 2. listAgentsToolCallback
+#### 1. listAgentsToolCallback
 
 Queries the agent list, supports filtering by status and keywords.
 
@@ -484,7 +441,7 @@ DataAgent integrates [Langfuse](https://langfuse.com/) as an LLM observability p
 - **Request Tracing**: Records the full lifecycle of each Graph stream processing (including new queries and human feedback)
 - **Token Usage Tracking**: Automatically accumulates prompt tokens and completion tokens per request
 - **Error Tracking**: Records exception types and error messages for troubleshooting
-- **Rich Metadata**: Records context attributes such as agentId, threadId, nl2sqlOnly, humanFeedback
+- **Rich Metadata**: Records context attributes such as agentId, threadId, humanFeedback
 
 ### Configuration
 

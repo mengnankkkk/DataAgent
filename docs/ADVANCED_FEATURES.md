@@ -102,50 +102,7 @@ spring:
 
 ### 可用工具
 
-#### 1. nl2SqlToolCallback
-
-将自然语言查询转换为SQL语句。
-
-```json
-{
-  "name": "nl2SqlToolCallback",
-  "description": "将自然语言查询转换为SQL语句。使用指定的智能体将用户的自然语言查询描述转换为可执行的SQL语句，支持复杂的数据查询需求。",
-  "inputSchema": {
-    "type": "object",
-    "properties": {
-      "nl2SqlRequest": {
-        "type": "object",
-        "properties": {
-          "agentId": {
-            "type": "string",
-            "description": "智能体ID，用于指定使用哪个智能体进行NL2SQL转换"
-          },
-          "naturalQuery": {
-            "type": "string",
-            "description": "自然语言查询描述，例如：'查询销售额最高的10个产品'"
-          }
-        },
-        "required": ["agentId", "naturalQuery"]
-      }
-    },
-    "required": ["nl2SqlRequest"],
-    "additionalProperties": false
-  }
-}
-```
-
-**使用示例**:
-
-```json
-{
-  "nl2SqlRequest": {
-    "agentId": "agent-123",
-    "naturalQuery": "查询过去30天销售额最高的10个产品"
-  }
-}
-```
-
-#### 2. listAgentsToolCallback
+#### 1. listAgentsToolCallback
 
 查询智能体列表，支持按状态和关键词过滤。
 

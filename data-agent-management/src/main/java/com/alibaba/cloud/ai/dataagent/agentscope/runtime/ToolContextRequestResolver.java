@@ -65,7 +65,6 @@ public final class ToolContextRequestResolver {
 			.agentId(metadata.agentId())
 			.threadId(metadata.threadId())
 			.runtimeRequestId(metadata.runtimeRequestId())
-			.nl2sqlOnly(metadata.nl2sqlOnly())
 			.humanFeedback(metadata.humanFeedback())
 			.humanFeedbackContent(metadata.humanFeedbackContent())
 			.build();

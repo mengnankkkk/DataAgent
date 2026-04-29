@@ -34,11 +34,6 @@ public interface ChatMessageService {
 	List<ChatMessage> findVisibleBySessionId(String sessionId, Long agentId);
 
 	/**
-	 * Get recent messages by session ID for memory loading.
-	 */
-	List<ChatMessage> findRecentBySessionId(String sessionId, int limit);
-
-	/**
 	 * Get messages by session ID and message type.
 	 */
 	List<ChatMessage> findBySessionIdAndMessageType(String sessionId, String messageType);

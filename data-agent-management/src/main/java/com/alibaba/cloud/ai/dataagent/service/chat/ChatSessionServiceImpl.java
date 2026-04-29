@@ -15,24 +15,26 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.chat;
 
+import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentScopeNativeSessionService;
 import com.alibaba.cloud.ai.dataagent.entity.ChatSession;
 import com.alibaba.cloud.ai.dataagent.mapper.ChatSessionMapper;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
-
 @Service
 @Slf4j
 @AllArgsConstructor
 public class ChatSessionServiceImpl implements ChatSessionService {
 
 	private final ChatSessionMapper chatSessionMapper;
+
+	private final AgentScopeNativeSessionService nativeSessionService;
 
 	/**
 	 * Get session list by agent ID
@@ -76,8 +78,10 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 	 */
 	@Override
 	public void clearSessionsByAgentId(Integer agentId) {
+		List<String> sessionIds = findByAgentId(agentId).stream().map(ChatSession::getId).collect(Collectors.toList());
 		LocalDateTime now = LocalDateTime.now();
 		int updated = chatSessionMapper.softDeleteByAgentId(agentId, now);
+		nativeSessionService.deleteSessionStates(sessionIds);
 		log.info("Cleared {} sessions for agent: {}", updated, agentId);
 	}
 
@@ -135,6 +139,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 	public void deleteSession(String sessionId) {
 		LocalDateTime now = LocalDateTime.now();
 		chatSessionMapper.softDeleteById(sessionId, now);
+		nativeSessionService.deleteSessionState(sessionId);
 		log.info("Deleted session: {}", sessionId);
 	}
 

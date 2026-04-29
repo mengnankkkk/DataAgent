@@ -40,6 +40,4 @@ public class AgentRequest {
 
 	private boolean rejectedPlan;
 
-	private boolean nl2sqlOnly;
-
 }

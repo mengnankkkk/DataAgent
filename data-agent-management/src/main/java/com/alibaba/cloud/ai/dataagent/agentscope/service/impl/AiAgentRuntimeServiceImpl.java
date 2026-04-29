@@ -16,14 +16,17 @@
 package com.alibaba.cloud.ai.dataagent.agentscope.service.impl;
 
 import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.runtime.AgentScopeMemoryFactory;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.AgentRuntimeEventPublisher;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.AgentRuntimeExtensionFactory;
+import com.alibaba.cloud.ai.dataagent.agentscope.runtime.PreparedMemory;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.QueryClarifyService;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.QueryClarifyService.QueryClarifyAssessment;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.AgentScopeToolkitFactory;
 import com.alibaba.cloud.ai.dataagent.agentscope.service.AgentScopeModelFactory;
 import com.alibaba.cloud.ai.dataagent.agentscope.service.AgentService;
-import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentSessionRegistry;
+import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentRuntimeRegistry;
+import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentScopeNativeSessionService;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.AgentRunContext;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.AgentRuntimeExtensions;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.ManagedAgent;
@@ -42,14 +45,19 @@ import com.alibaba.cloud.ai.dataagent.service.aimodelconfig.ModelConfigDataServi
 import com.alibaba.cloud.ai.dataagent.service.chat.ChatMessageService;
 import com.alibaba.cloud.ai.dataagent.service.chat.ChatSessionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.message.Msg;
+import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.model.Model;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import lombok.RequiredArgsConstructor;
@@ -84,7 +92,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 
 	private static final String AGENT_STATUS_OFFLINE = "offline";
 
-	private final AgentSessionRegistry sessionRegistry;
+	private final AgentRuntimeRegistry runtimeRegistry;
 
 	private final ModelConfigDataService modelConfigDataService;
 
@@ -97,6 +105,8 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	private final ManagedAgentRegistry managedAgentRegistry;
 
 	private final AgentRuntimeExtensionFactory agentRuntimeExtensionFactory;
+
+	private final AgentScopeMemoryFactory agentScopeMemoryFactory;
 
 	private final com.alibaba.cloud.ai.dataagent.service.agent.AgentService agentService;
 
@@ -113,19 +123,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 
 	private final QueryClarifyService queryClarifyService;
 
-	@Override
-	public String nl2sql(String naturalQuery, String agentId) {
-		log.info("NL2SQL runtime invoked for agentId={}", agentId);
-		AgentRequest request = AgentRequest.builder().agentId(agentId).query(naturalQuery).nl2sqlOnly(true).build();
-		initializeRuntimeRequest(request);
-		sessionRegistry.register(request.getThreadId(), request.getRuntimeRequestId());
-		try {
-			return executeAgent(request);
-		}
-		finally {
-			sessionRegistry.finish(request.getThreadId(), request.getRuntimeRequestId());
-		}
-	}
+	private final AgentScopeNativeSessionService nativeSessionService;
 
 	@Override
 	public void graphStreamProcess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest agentRequest) {
@@ -133,9 +131,9 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		String threadId = agentRequest.getThreadId();
 		String runtimeRequestId = agentRequest.getRuntimeRequestId();
 		StreamTextTracker streamTextTracker = new StreamTextTracker();
-		sessionRegistry.register(threadId, runtimeRequestId);
+		runtimeRegistry.register(threadId, runtimeRequestId);
 		AgentRuntimeEventPublisher eventPublisher = response -> {
-			if (!sessionRegistry.isActive(threadId, runtimeRequestId)) {
+			if (!runtimeRegistry.isActive(threadId, runtimeRequestId)) {
 				return;
 			}
 			if (response != null && response.getTextType() == TextType.TEXT
@@ -146,7 +144,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		};
 
 		Mono.fromCallable(() -> executeAgent(agentRequest, eventPublisher))
-			.doFinally(signalType -> sessionRegistry.finish(threadId, runtimeRequestId))
+			.doFinally(signalType -> runtimeRegistry.finish(threadId, runtimeRequestId))
 			.subscribeOn(Schedulers.boundedElastic())
 			.subscribe(result -> emitSuccess(sink, agentRequest, result, streamTextTracker),
 					error -> emitError(sink, agentRequest, error));
@@ -154,14 +152,14 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 
 	@Override
 	public void stopStreamProcessing(String threadId, String runtimeRequestId) {
-		sessionRegistry.markCancelled(threadId, runtimeRequestId);
+		runtimeRegistry.markCancelled(threadId, runtimeRequestId);
 	}
 
 	private void emitSuccess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest request, String result,
                              StreamTextTracker streamTextTracker) {
 		String threadId = request.getThreadId();
 		String runtimeRequestId = request.getRuntimeRequestId();
-		if (!sessionRegistry.isActive(threadId, runtimeRequestId)) {
+		if (!runtimeRegistry.isActive(threadId, runtimeRequestId)) {
 			return;
 		}
 		if (shouldEmitFinalResponse(result, streamTextTracker)) {
@@ -187,13 +185,13 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	private void emitError(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest request, Throwable error) {
 		String threadId = request.getThreadId();
 		String runtimeRequestId = request.getRuntimeRequestId();
-		if (sessionRegistry.isCancelled(threadId, runtimeRequestId)) {
+		if (runtimeRegistry.isCancelled(threadId, runtimeRequestId)) {
 			log.info("AgentScope runtime cancelled, suppress error propagation. threadId={}, runtimeRequestId={}",
 					threadId, runtimeRequestId);
 			return;
 		}
 		log.error("AgentScope runtime failed, threadId={}", threadId, error);
-		if (sessionRegistry.isActive(threadId, runtimeRequestId)) {
+		if (runtimeRegistry.isActive(threadId, runtimeRequestId)) {
 			String message = error.getMessage() == null ? "AgentScope 运行失败。" : error.getMessage();
 			sink.tryEmitNext(ServerSentEvent.builder(AgentResponse.error(request.getAgentId(), threadId, message))
 				.event(STREAM_EVENT_ERROR)
@@ -208,7 +206,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 
 	private void initializeRuntimeRequest(AgentRequest request) {
 		if (!StringUtils.hasText(request.getThreadId())) {
-			request.setThreadId(UUID.randomUUID().toString());
+			throw new IllegalArgumentException("threadId must not be empty");
 		}
 		if (!StringUtils.hasText(request.getRuntimeRequestId())) {
 			request.setRuntimeRequestId(UUID.randomUUID().toString());
@@ -216,12 +214,14 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	}
 
 	private String executeAgent(AgentRequest request, AgentRuntimeEventPublisher eventPublisher) {
-		sessionRegistry.markRunning(request.getThreadId(), request.getRuntimeRequestId(), Thread.currentThread());
+		runtimeRegistry.markRunning(request.getThreadId(), request.getRuntimeRequestId(), Thread.currentThread());
 		answerTraceExplainStore.openScope(request);
 		Span rootSpan = startRuntimeSpan(request);
+		PreparedMemory preparedMemory = null;
 		try {
 			try (Scope ignored = rootSpan.makeCurrent()) {
-				if (sessionRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())) {
+				preparedMemory = agentScopeMemoryFactory.create(request);
+				if (runtimeRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())) {
 					rootSpan.setStatus(StatusCode.OK, "cancelled");
 					return "";
 				}
@@ -231,7 +231,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 				rootSpan.setAttribute("dataagent.query_clarify.risk_level", clarifyAssessment.riskLevel().value());
 				rootSpan.setAttribute("dataagent.query_clarify.blocked", clarifyAssessment.shouldBlockExecution());
 				if (clarifyAssessment.shouldBlockExecution()) {
-					return blockForClarification(request, eventPublisher, rootSpan, clarifyAssessment);
+					return blockForClarification(request, eventPublisher, rootSpan, clarifyAssessment, preparedMemory);
 				}
 				Agent managedAgentConfig = resolveManagedAgent(request.getAgentId());
 				ModelConfigDTO modelConfig = modelConfigDataService.getActiveConfigByType(ModelType.CHAT);
@@ -242,7 +242,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 						modelConfig.getModelName(), toolCallbacks);
 				ManagedAgent managedAgent = managedAgentRegistry.getRequired();
 				AgentRuntimeExtensions runtimeExtensions = agentRuntimeExtensionFactory.create(request, eventPublisher,
-						toolCallbacks);
+						toolCallbacks, preparedMemory);
 				Msg response;
 				try {
 					response = managedAgent.run(new AgentRunContext(request.getAgentId(), request.getThreadId(), model,
@@ -250,7 +250,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 							buildUserPrompt(request), AgentRuntimeConstant.AGENT_CALL_TIMEOUT, runtimeExtensions));
 				}
 				catch (RuntimeException ex) {
-					if (sessionRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())
+					if (runtimeRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())
 							&& isInterruptedCancellation(ex)) {
 						Thread.interrupted();
 						rootSpan.setStatus(StatusCode.OK, "cancelled");
@@ -260,10 +260,11 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 					}
 					throw ex;
 				}
-				if (sessionRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())) {
+				if (runtimeRegistry.isCancelled(request.getThreadId(), request.getRuntimeRequestId())) {
 					rootSpan.setStatus(StatusCode.OK, "cancelled");
 					return "";
 				}
+				persistNativeMemorySafely(request, runtimeExtensions.memory());
 				rootSpan.setStatus(StatusCode.OK);
 				String answer = extractText(response);
 				answerTraceExplainStore.recordFinalAnswer(answer);
@@ -278,7 +279,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		}
 		finally {
 			rootSpan.end();
-			sessionRegistry.clearRunning(request.getThreadId(), request.getRuntimeRequestId());
+			runtimeRegistry.clearRunning(request.getThreadId(), request.getRuntimeRequestId());
 			answerTraceExplainStore.closeScope();
 		}
 	}
@@ -289,7 +290,6 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		span.setAttribute(SessionTraceStore.ATTR_RUNTIME_REQUEST_ID, request.getRuntimeRequestId());
 		span.setAttribute(SessionTraceStore.ATTR_AGENT_ID, request.getAgentId() == null ? "" : request.getAgentId());
 		span.setAttribute("dataagent.runtime.human_feedback", request.isHumanFeedback());
-		span.setAttribute("dataagent.runtime.nl2sql_only", request.isNl2sqlOnly());
 		return span;
 	}
 
@@ -303,8 +303,10 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	}
 
 	private String blockForClarification(AgentRequest request, AgentRuntimeEventPublisher eventPublisher, Span rootSpan,
-                                         QueryClarifyAssessment clarifyAssessment) {
+			QueryClarifyAssessment clarifyAssessment, PreparedMemory preparedMemory) {
 		String clarifyText = clarifyAssessment.userMessage();
+		appendClarifyTurn(preparedMemory, request, clarifyText);
+		persistNativeMemorySafely(request, preparedMemory == null ? null : preparedMemory.memory());
 		answerTraceExplainStore.recordFinalAnswer(clarifyText);
 		persistAnswerExplainSnapshot(request);
 		mirrorExplainSummary(rootSpan, request);
@@ -406,6 +408,102 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 
 	private String buildUserPrompt(AgentRequest request) {
 		return request.getQuery() == null ? "" : request.getQuery();
+	}
+
+	private void persistNativeMemorySafely(AgentRequest request, io.agentscope.core.memory.Memory memory) {
+		if (!(memory instanceof InMemoryMemory inMemoryMemory) || request == null
+				|| !StringUtils.hasText(request.getThreadId())) {
+			return;
+		}
+		normalizeMemoryForPersistence(request, inMemoryMemory);
+		try {
+			nativeSessionService.saveMemory(inMemoryMemory, request.getThreadId());
+		}
+		catch (RuntimeException ex) {
+			log.warn("Failed to persist AgentScope native memory. threadId={}, runtimeRequestId={}",
+					request.getThreadId(), request.getRuntimeRequestId(), ex);
+		}
+	}
+
+	private void appendClarifyTurn(PreparedMemory preparedMemory, AgentRequest request, String clarifyText) {
+		if (preparedMemory == null || request == null) {
+			return;
+		}
+		InMemoryMemory memory = preparedMemory.memory();
+		if (memory == null) {
+			return;
+		}
+		String userInput = resolvePersistedUserInput(request);
+		if (StringUtils.hasText(userInput)) {
+			memory.addMessage(Msg.builder().name("user").role(MsgRole.USER).textContent(userInput).build());
+		}
+		if (StringUtils.hasText(clarifyText)) {
+			memory.addMessage(Msg.builder().name("assistant").role(MsgRole.ASSISTANT).textContent(clarifyText).build());
+		}
+	}
+
+	private void normalizeMemoryForPersistence(AgentRequest request, InMemoryMemory memory) {
+		if (request == null || memory == null || !StringUtils.hasText(request.getHumanFeedbackContent())
+				|| !StringUtils.hasText(request.getQuery())) {
+			return;
+		}
+		List<Msg> originalMessages = memory.getMessages();
+		if (originalMessages == null || originalMessages.isEmpty()) {
+			return;
+		}
+		List<Msg> normalizedMessages = new ArrayList<>(originalMessages);
+		int replacementIndex = findReplayQueryIndex(normalizedMessages, request.getQuery());
+		if (replacementIndex < 0) {
+			return;
+		}
+		Msg replayMessage = normalizedMessages.get(replacementIndex);
+		normalizedMessages.set(replacementIndex,
+				Msg.builder()
+					.name(resolveMsgName(replayMessage, "user"))
+					.role(MsgRole.USER)
+					.textContent(request.getHumanFeedbackContent())
+					.build());
+		if (Objects.equals(originalMessages, normalizedMessages)) {
+			return;
+		}
+		memory.clear();
+		normalizedMessages.forEach(memory::addMessage);
+	}
+
+	private int findReplayQueryIndex(List<Msg> messages, String originalQuery) {
+		int firstMatchIndex = -1;
+		for (int i = 0; i < messages.size(); i++) {
+			Msg message = messages.get(i);
+			if (message == null || message.getRole() != MsgRole.USER) {
+				continue;
+			}
+			if (!Objects.equals(message.getTextContent(), originalQuery)) {
+				continue;
+			}
+			if (firstMatchIndex < 0) {
+				firstMatchIndex = i;
+				continue;
+			}
+			return i;
+		}
+		return -1;
+	}
+
+	private String resolveMsgName(Msg message, String fallback) {
+		if (message != null && StringUtils.hasText(message.getName())) {
+			return message.getName();
+		}
+		return fallback;
+	}
+
+	private String resolvePersistedUserInput(AgentRequest request) {
+		if (request == null) {
+			return null;
+		}
+		if (StringUtils.hasText(request.getHumanFeedbackContent())) {
+			return request.getHumanFeedbackContent();
+		}
+		return request.getQuery();
 	}
 
 	private void validateAgentStatus(Agent agent, String requestAgentId) {

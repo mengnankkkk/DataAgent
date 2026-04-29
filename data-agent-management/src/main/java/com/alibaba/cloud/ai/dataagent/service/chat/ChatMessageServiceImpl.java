@@ -21,7 +21,6 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,14 +49,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 	public List<ChatMessage> findVisibleBySessionId(String sessionId, Long agentId) {
 		chatSessionService.requireSessionForAgent(sessionId, agentId);
 		return findVisibleBySessionId(sessionId);
-	}
-
-	@Override
-	public List<ChatMessage> findRecentBySessionId(String sessionId, int limit) {
-		if (limit <= 0) {
-			return Collections.emptyList();
-		}
-		return chatMessageMapper.selectRecentMemoryEligibleBySessionId(sessionId, limit);
 	}
 
 	@Override

@@ -43,9 +43,6 @@ public class HumanFeedbackHook implements Hook {
 	}
 
 	public static HumanFeedbackHook from(AgentRequest request) {
-		if (request.isNl2sqlOnly()) {
-			return null;
-		}
 		boolean hasFeedbackContent = StringUtils.hasText(request.getHumanFeedbackContent());
 		boolean requiresReplay = hasFeedbackContent || request.isRejectedPlan();
 		boolean requiresPause = request.isHumanFeedback() && !requiresReplay;

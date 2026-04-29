@@ -16,9 +16,6 @@
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
 import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
-import com.alibaba.cloud.ai.dataagent.agentscope.session.AgentSessionRegistry;
-import com.alibaba.cloud.ai.dataagent.service.chat.ChatMessageService;
-import com.alibaba.cloud.ai.dataagent.service.chat.ChatSessionService;
 import io.agentscope.core.hook.Hook;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,20 +27,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AgentScopeHookFactory {
 
-	private final ChatSessionService chatSessionService;
-
-	private final ChatMessageService chatMessageService;
-
-	private final AgentSessionRegistry sessionRegistry;
-
 	public List<Hook> create(AgentRequest request, @Nullable AgentRuntimeEventPublisher eventPublisher) {
 		List<Hook> hooks = new ArrayList<>();
 		if (eventPublisher != null) {
-			hooks.add(new AgentScopeStreamingHook(request.getAgentId(), request.getThreadId(), request.isNl2sqlOnly(),
-					eventPublisher));
+			hooks.add(new AgentScopeStreamingHook(request.getAgentId(), request.getThreadId(), eventPublisher));
 		}
-		hooks.add(new AgentScopeMemoryPersistenceHook(request.getThreadId(), request.getRuntimeRequestId(),
-				sessionRegistry, chatSessionService, chatMessageService));
 		HumanFeedbackHook humanFeedbackHook = HumanFeedbackHook.from(request);
 		if (humanFeedbackHook != null) {
 			hooks.add(humanFeedbackHook);

@@ -44,9 +44,9 @@ public class DomainBusinessKnowledgeToolSupport {
 			      "type": "string",
 			      "description": "必填。需要检索的业务问题、指标名、术语、SOP 主题或案例主题。"
 			    },
-			    "knowledgeTypes": {
-			      "type": "array",
-			      "description": "可选。限定知识范围。支持 businessKnowledge、agentKnowledge、document、qa、faq、all。兼容旧别名 businessTerm。",
+		    "knowledgeTypes": {
+		      "type": "array",
+		      "description": "可选。限定知识范围。支持 businessKnowledge、agentKnowledge、document、qa、faq、all。",
 			      "items": {
 			        "type": "string"
 			      }

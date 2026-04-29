@@ -34,28 +34,22 @@ public class AgentScopeStreamingHook implements Hook {
 
 	private static final String PLANNER_REASONING_NODE = "planner-reasoning";
 
-	private static final String SQL_GENERATOR_REASONING_NODE = "sql-generator-reasoning";
-
 	private final String agentId;
 
 	private final String threadId;
 
-	private final boolean nl2sqlOnly;
-
 	private final AgentRuntimeEventPublisher eventPublisher;
 
-	public AgentScopeStreamingHook(String agentId, String threadId, boolean nl2sqlOnly,
-			AgentRuntimeEventPublisher eventPublisher) {
+	public AgentScopeStreamingHook(String agentId, String threadId, AgentRuntimeEventPublisher eventPublisher) {
 		this.agentId = agentId;
 		this.threadId = threadId;
-		this.nl2sqlOnly = nl2sqlOnly;
 		this.eventPublisher = eventPublisher;
 	}
 
 	@Override
 	public <T extends HookEvent> Mono<T> onEvent(T event) {
 		if (event instanceof ReasoningChunkEvent reasoningChunkEvent) {
-			emit(resolveReasoningNodeName(), reasoningChunkEvent.getIncrementalChunk().getTextContent());
+			emit(PLANNER_REASONING_NODE, reasoningChunkEvent.getIncrementalChunk().getTextContent());
 		}
 		else if (event instanceof PreActingEvent preActingEvent) {
 			emit(resolveToolNodeName(preActingEvent.getToolUse().getName()),
@@ -83,10 +77,6 @@ public class AgentScopeStreamingHook implements Hook {
 			.textType(TextType.TEXT)
 			.text(text)
 			.build());
-	}
-
-	private String resolveReasoningNodeName() {
-		return nl2sqlOnly ? SQL_GENERATOR_REASONING_NODE : PLANNER_REASONING_NODE;
 	}
 
 	private String resolveToolNodeName(String toolName) {

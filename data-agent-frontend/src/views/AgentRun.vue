@@ -1296,7 +1296,6 @@
             query: requestQuery,
             humanFeedback: Boolean(activeClarify),
             humanFeedbackContent: feedbackContent,
-            nl2sqlOnly: false,
             rejectedPlan: false,
             threadId: currentSession.value.id,
             runtimeRequestId: createRuntimeRequestId(),

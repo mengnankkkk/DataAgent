@@ -317,7 +317,7 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 					addAppliedType(appliedTypes, "agentKnowledge");
 					filterAgentKnowledgeByType = false;
 				}
-				case "businessknowledge", "business_knowledge", "businessterm", "business_term", "business" -> {
+				case "businessknowledge", "business_knowledge" -> {
 					categories.add(SearchCategory.BUSINESS_TERM);
 					addAppliedType(appliedTypes, "businessKnowledge");
 				}

@@ -22,7 +22,6 @@ export interface AgentRequest {
   humanFeedback?: boolean;
   humanFeedbackContent?: string;
   rejectedPlan: boolean;
-  nl2sqlOnly: boolean;
 }
 
 export interface ClarifyMetadata {
@@ -90,7 +89,6 @@ class GraphService {
       params.append('humanFeedbackContent', request.humanFeedbackContent);
     }
     params.append('rejectedPlan', request.rejectedPlan.toString());
-    params.append('nl2sqlOnly', request.nl2sqlOnly.toString());
 
     const url = `${API_BASE_URL}/stream/search?${params.toString()}`;
 
