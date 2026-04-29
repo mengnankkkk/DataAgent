@@ -634,8 +634,82 @@
           </span>
         </div>
 
+        <section
+          v-if="answerExplain.clarify && Object.keys(answerExplain.clarify).length > 0"
+          class="answer-explain-section"
+        >
+          <div class="answer-explain-section-title">澄清来源</div>
+          <div class="answer-explain-section-desc">
+            以下信息说明系统在正式查库前如何判断问题是否存在歧义，以及是否需要你补充信息。
+          </div>
+          <div class="answer-explain-kv">
+            <div v-if="answerExplain.clarify.summary" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">澄清结论</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.clarify.summary }}</span>
+            </div>
+            <div v-if="answerExplain.clarify.riskLevel" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">风险等级</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.clarify.riskLevel }}</span>
+            </div>
+            <div
+              v-if="typeof answerExplain.clarify.clarifyRequired === 'boolean'"
+              class="answer-explain-kv-row"
+            >
+              <span class="answer-explain-kv-key">是否需要澄清</span>
+              <span class="answer-explain-kv-value">
+                {{ answerExplain.clarify.clarifyRequired ? '是' : '否' }}
+              </span>
+            </div>
+            <div
+              v-if="typeof answerExplain.clarify.shouldBlockExecution === 'boolean'"
+              class="answer-explain-kv-row"
+            >
+              <span class="answer-explain-kv-key">是否阻止直接查库</span>
+              <span class="answer-explain-kv-value">
+                {{ answerExplain.clarify.shouldBlockExecution ? '是' : '否' }}
+              </span>
+            </div>
+            <div
+              v-if="asExplainStringList(answerExplain.clarify.missingDimensions).length > 0"
+              class="answer-explain-kv-row"
+            >
+              <span class="answer-explain-kv-key">缺失维度</span>
+              <span class="answer-explain-kv-value">
+                {{ asExplainStringList(answerExplain.clarify.missingDimensions).join('、') }}
+              </span>
+            </div>
+            <div
+              v-if="asExplainStringList(answerExplain.clarify.followUpQuestions).length > 0"
+              class="answer-explain-kv-row"
+            >
+              <span class="answer-explain-kv-key">追问建议</span>
+              <span class="answer-explain-kv-value">
+                {{ asExplainStringList(answerExplain.clarify.followUpQuestions).join('；') }}
+              </span>
+            </div>
+            <div
+              v-if="asExplainStringList(answerExplain.clarify.suggestedAssumptions).length > 0"
+              class="answer-explain-kv-row"
+            >
+              <span class="answer-explain-kv-key">建议假设</span>
+              <span class="answer-explain-kv-value">
+                {{ asExplainStringList(answerExplain.clarify.suggestedAssumptions).join('；') }}
+              </span>
+            </div>
+            <div v-if="answerExplain.clarify.humanFeedbackContent" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">人工补充</span>
+              <span class="answer-explain-kv-value">
+                {{ answerExplain.clarify.humanFeedbackContent }}
+              </span>
+            </div>
+          </div>
+        </section>
+
         <section v-if="answerExplain.semanticHits.length > 0" class="answer-explain-section">
-          <div class="answer-explain-section-title">问题理解</div>
+          <div class="answer-explain-section-title">语义模型来源</div>
+          <div class="answer-explain-section-desc">
+            以下命中来自语义模型召回，用于补充表、字段和业务语义理解。
+          </div>
           <div class="answer-explain-card-list">
             <article
               v-for="(hit, index) in answerExplain.semanticHits"
@@ -663,15 +737,9 @@
           </div>
         </section>
 
-        <section
-          v-if="answerExplain.sql || answerExplain.sqlExplanation"
-          class="answer-explain-section"
-        >
-          <div class="answer-explain-section-title">SQL 解释</div>
-          <div v-if="answerExplain.sqlExplanation" class="answer-explain-sql-summary">
-            {{ answerExplain.sqlExplanation }}
-          </div>
-          <pre v-if="answerExplain.sql" class="answer-explain-code">{{ answerExplain.sql }}</pre>
+        <section v-if="answerExplain.sql" class="answer-explain-section">
+          <div class="answer-explain-section-title">执行 SQL</div>
+          <pre class="answer-explain-code">{{ answerExplain.sql }}</pre>
         </section>
 
         <section class="answer-explain-section">
@@ -701,26 +769,86 @@
             </div>
             <div v-if="answerExplain.usedColumns.length > 0" class="answer-explain-kv-row">
               <span class="answer-explain-kv-key">使用字段</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.usedColumns.join('、') }}</span>
+            </div>
+            <div v-if="answerExplain.decisionReason" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">工具决策来源</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.decisionReason }}</span>
+            </div>
+            <div
+              v-if="answerExplain.toolDecisionReasons && answerExplain.toolDecisionReasons.length > 0"
+              class="answer-explain-kv-row"
+            >
+              <span class="answer-explain-kv-key">工具决策细节</span>
               <span class="answer-explain-kv-value">
-                {{ answerExplain.usedColumns.join('、') }}
+                <ul class="answer-explain-inline-list">
+                  <li
+                    v-for="(reason, index) in answerExplain.toolDecisionReasons"
+                    :key="`decision-${index}`"
+                  >
+                    {{ reason }}
+                  </li>
+                </ul>
               </span>
             </div>
-            <div
-              v-for="([key, value], index) in Object.entries(answerExplain.permissions || {})"
-              :key="`permission-${index}`"
-              class="answer-explain-kv-row"
-            >
-              <span class="answer-explain-kv-key">{{ key }}</span>
-              <span class="answer-explain-kv-value">{{ formatExplainValue(value) }}</span>
+            <div v-if="answerExplain.resultScope" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">结果裁剪来源</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.resultScope }}</span>
             </div>
             <div
-              v-for="([key, value], index) in Object.entries(answerExplain.stats || {})"
-              :key="`stat-${index}`"
+              v-if="answerExplain.resultScopeDetails && answerExplain.resultScopeDetails.length > 0"
               class="answer-explain-kv-row"
             >
-              <span class="answer-explain-kv-key">{{ key }}</span>
-              <span class="answer-explain-kv-value">{{ formatExplainValue(value) }}</span>
+              <span class="answer-explain-kv-key">结果裁剪细节</span>
+              <span class="answer-explain-kv-value">
+                <ul class="answer-explain-inline-list">
+                  <li
+                    v-for="(detail, index) in answerExplain.resultScopeDetails"
+                    :key="`scope-${index}`"
+                  >
+                    {{ detail }}
+                  </li>
+                </ul>
+              </span>
             </div>
+            <div v-if="answerExplain.semanticHits.length > 0" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">语义模型命中</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.semanticHits.length }} 条</span>
+            </div>
+            <div v-if="answerExplain.knowledgeHits.length > 0" class="answer-explain-kv-row">
+              <span class="answer-explain-kv-key">RAG / 知识命中</span>
+              <span class="answer-explain-kv-value">{{ answerExplain.knowledgeHits.length }} 条</span>
+            </div>
+          </div>
+        </section>
+
+        <section
+          v-if="answerExplain.relationEvidence && answerExplain.relationEvidence.length > 0"
+          class="answer-explain-section"
+        >
+          <div class="answer-explain-section-title">关联来源</div>
+          <div class="answer-explain-section-desc">
+            以下信息说明本轮多表查询优先依据哪些物理外键或逻辑关系完成关联。
+          </div>
+          <div class="answer-explain-card-list">
+            <article
+              v-for="(relation, index) in answerExplain.relationEvidence"
+              :key="`relation-${index}`"
+              class="answer-explain-card"
+            >
+              <div class="answer-explain-card-title">
+                {{ relation.sourceTable }}.{{ relation.sourceColumn }} → {{ relation.targetTable }}.{{ relation.targetColumn }}
+              </div>
+              <div class="answer-explain-card-meta">
+                <span>{{ relation.sourceType || '-' }}</span>
+                <span v-if="relation.relationType">{{ relation.relationType }}</span>
+                <span v-if="relation.declaredInDatabase">数据库声明</span>
+                <span v-else-if="relation.virtual">逻辑关系</span>
+              </div>
+              <div v-if="relation.description" class="answer-explain-card-body">
+                {{ relation.description }}
+              </div>
+            </article>
           </div>
         </section>
 
@@ -749,7 +877,10 @@
         </section>
 
         <section v-if="answerExplain.knowledgeHits.length > 0" class="answer-explain-section">
-          <div class="answer-explain-section-title">知识来源</div>
+          <div class="answer-explain-section-title">RAG / 知识来源</div>
+          <div class="answer-explain-section-desc">
+            以下命中来自业务知识库、FAQ、文档切片等 RAG 召回结果，会直接影响最终回答。
+          </div>
           <div class="answer-explain-card-list">
             <article
               v-for="(hit, index) in answerExplain.knowledgeHits"
@@ -822,8 +953,8 @@
   } from '@/services/chat';
   import GraphService, {
     type ClarifyMetadata,
-    type GraphRequest,
-    type GraphNodeResponse,
+    type AgentRequest,
+    type AgentResponse,
     TextType,
   } from '@/services/graph';
   import { type Agent } from '@/services/agent';
@@ -948,7 +1079,7 @@
         useSessionStateManager();
       const isStreaming = ref(false);
       const isSubmittingMessage = ref(false);
-      const nodeBlocks = ref<GraphNodeResponse[][]>([]);
+      const nodeBlocks = ref<AgentResponse[][]>([]);
       const options = ref({
         markdownIt: {
           linkify: true,
@@ -1073,10 +1204,30 @@
             session.id,
             requireResolvedAgentId(),
           );
+          await preloadSessionLatestObservability(session.id);
           scrollToBottom();
         } catch (error) {
           ElMessage.error('加载消息失败');
           console.error('加载消息失败:', error);
+        }
+      };
+
+      const preloadSessionLatestObservability = async (sessionId: string) => {
+        if (!currentSession.value || currentSession.value.id !== sessionId) {
+          return;
+        }
+        try {
+          await loadLatestTrace();
+        } catch (error) {
+          console.warn('预加载最新 trace 失败:', error);
+        }
+        if (!currentSession.value || currentSession.value.id !== sessionId) {
+          return;
+        }
+        try {
+          await loadLatestAnswerExplain({ visible: false });
+        } catch (error) {
+          console.warn('预加载最新数据来源失败:', error);
         }
       };
 
@@ -1140,7 +1291,7 @@
           currentMessages.value.push(savedMessage);
           getSessionState(currentSession.value.id);
 
-          const request: GraphRequest = {
+          const request: AgentRequest = {
             agentId: String(requireResolvedAgentId()),
             query: requestQuery,
             humanFeedback: Boolean(activeClarify),
@@ -1155,7 +1306,7 @@
           pendingClarify.value = null;
           getSessionState(currentSession.value.id).pendingClarify = null;
 
-          await sendGraphRequest(request);
+          await sendAgentRequest(request);
         } catch (error) {
           if (activeClarify && currentSession.value) {
             pendingClarify.value = activeClarify;
@@ -1169,8 +1320,8 @@
       };
 
       const buildExplainMetadataForNode = (
-        request: GraphRequest,
-        node: GraphNodeResponse[],
+        request: AgentRequest,
+        node: AgentResponse[],
       ): MessageExplainMetadata | null => {
         if (!request.runtimeRequestId || !node.length) {
           return null;
@@ -1190,8 +1341,8 @@
 
       const saveAssistantNodeMessage = async (
         sessionId: string,
-        node: GraphNodeResponse[],
-        request?: GraphRequest | null,
+        node: AgentResponse[],
+        request?: AgentRequest | null,
       ): Promise<void> => {
         if (!node || !node.length) {
           return;
@@ -1229,7 +1380,7 @@
         await ChatService.saveMessage(sessionId, requireResolvedAgentId(), aiMessage);
       };
 
-      const sendGraphRequest = async (request: GraphRequest) => {
+      const sendAgentRequest = async (request: AgentRequest) => {
         const sessionId = currentSession.value!.id;
         currentSession.value!.title;
         const sessionState = getSessionState(sessionId);
@@ -1245,7 +1396,7 @@
           // 重置报告状态
           resetReportState(sessionState, request);
 
-          const saveNodeMessage = (node: GraphNodeResponse[]): Promise<void> => {
+          const saveNodeMessage = (node: AgentResponse[]): Promise<void> => {
             return saveAssistantNodeMessage(sessionId, node, request).catch(error => {
               console.error('保存AI消息失败:', error);
             });
@@ -1265,7 +1416,7 @@
 
           const closeStream = await GraphService.streamSearch(
             request,
-            (response: GraphNodeResponse) => {
+            (response: AgentResponse) => {
               if (response.error) {
                 ElMessage.error(`处理错误: ${response.text}`);
                 return;
@@ -1295,7 +1446,7 @@
                   }
 
                   // 创建新的节点块
-                  const newBlock: GraphNodeResponse = {
+                  const newBlock: AgentResponse = {
                     ...response,
                     text: response.text,
                   };
@@ -1309,8 +1460,8 @@
                   sessionState.htmlReportSize = sessionState.htmlReportContent.length;
 
                   // 更新显示：当前已经收集了多少字节的报告
-                  const reportNode: GraphNodeResponse[] = sessionState.nodeBlocks.find(
-                    (block: GraphNodeResponse[]) =>
+                  const reportNode: AgentResponse[] = sessionState.nodeBlocks.find(
+                    (block: AgentResponse[]) =>
                       block.length > 0 &&
                       block[0].nodeName === 'ReportGeneratorNode' &&
                       block[0].textType === 'HTML',
@@ -1329,8 +1480,8 @@
                 // 处理Markdown报告
                 else if (response.textType === 'MARK_DOWN') {
                   sessionState.markdownReportContent += response.text;
-                  const reportNode: GraphNodeResponse[] = sessionState.nodeBlocks.find(
-                    (block: GraphNodeResponse[]) =>
+                  const reportNode: AgentResponse[] = sessionState.nodeBlocks.find(
+                    (block: AgentResponse[]) =>
                       block.length > 0 &&
                       block[0].nodeName === 'ReportGeneratorNode' &&
                       block[0].textType === 'MARK_DOWN',
@@ -1353,7 +1504,7 @@
                   pendingSavePromises.push(savePromise);
                 }
                 // 创建新的节点块
-                const newBlock: GraphNodeResponse = {
+                const newBlock: AgentResponse = {
                   ...response,
                   text: response.text,
                 };
@@ -1372,7 +1523,7 @@
                   }
 
                   // 创建新的节点块
-                  const newBlock: GraphNodeResponse = {
+                  const newBlock: AgentResponse = {
                     ...response,
                     text: response.text,
                   };
@@ -1382,14 +1533,14 @@
                 } else {
                   // 继续当前节点的内容
                   if (currentBlockIndex >= 0 && sessionState.nodeBlocks[currentBlockIndex]) {
-                    const newBlock: GraphNodeResponse = {
+                    const newBlock: AgentResponse = {
                       ...response,
                       text: response.text,
                     };
                     sessionState.nodeBlocks[currentBlockIndex].push(newBlock);
                   } else {
                     // 创建新的节点块
-                    const newBlock: GraphNodeResponse = {
+                    const newBlock: AgentResponse = {
                       ...response,
                       text: response.text,
                     };
@@ -1595,7 +1746,7 @@
       };
 
       // 生成节点容器的HTML代码
-      const generateNodeHtml = (node: GraphNodeResponse[]) => {
+      const generateNodeHtml = (node: AgentResponse[]) => {
         const content = formatNodeContent(node);
 
         return `
@@ -1606,7 +1757,7 @@
       `;
       };
 
-      const formatNodeContent = (node: GraphNodeResponse[]) => {
+      const formatNodeContent = (node: AgentResponse[]) => {
         let content = '';
 
         for (let idx = 0; idx < node.length; idx++) {
@@ -1713,7 +1864,7 @@
       };
 
       // 重置报告状态
-      const resetReportState = (sessionState: SessionRuntimeState, request: GraphRequest) => {
+      const resetReportState = (sessionState: SessionRuntimeState, request: AgentRequest) => {
         sessionState.isStreaming = true;
         sessionState.nodeBlocks = [];
         sessionState.persistedBlockCount = 0;
@@ -1795,20 +1946,40 @@
         return null;
       });
 
-      const latestExplainRuntimeRequestId = computed(() => {
+      const latestExplainRuntimeRequestId = computed(() => sessionTrace.value?.runtimeRequestId ?? null);
+
+      const loadLatestAnswerExplain = async (options?: { visible?: boolean }) => {
         if (!currentSession.value) {
-          return null;
+          return;
         }
-        const sessionState = getSessionState(currentSession.value.id);
-        if (sessionState.lastRequest?.runtimeRequestId) {
-          return sessionState.lastRequest.runtimeRequestId;
+        if (options?.visible ?? true) {
+          answerExplainVisible.value = true;
         }
-        const message = latestExplainMessage.value;
-        if (!message) {
-          return null;
+        answerExplainLoading.value = true;
+        answerExplainError.value = '';
+        try {
+          answerExplain.value = await ChatService.getLatestAnswerExplain(
+            currentSession.value.id,
+            requireResolvedAgentId(),
+          );
+          saveViewToState(currentSession.value.id, {
+            isStreaming,
+            nodeBlocks,
+            answerExplain,
+            answerExplainVisible,
+          });
+        } catch (error: any) {
+          answerExplain.value = null;
+          if (error?.response?.status === 404) {
+            answerExplainError.value = '当前会话还没有可查看的数据来源。';
+          } else {
+            answerExplainError.value = '加载数据来源失败，请稍后重试。';
+          }
+          console.error('加载最新 answer explain 失败:', error);
+        } finally {
+          answerExplainLoading.value = false;
         }
-        return parseMessageMetadata(message)?.runtimeRequestId ?? null;
-      });
+      };
 
       const loadAnswerExplainByRuntimeRequestId = async (runtimeRequestId: string) => {
         if (!currentSession.value) {
@@ -1844,12 +2015,12 @@
       };
 
       const openLatestAnswerExplain = async () => {
-        const runtimeRequestId = latestExplainRuntimeRequestId.value;
-        if (!runtimeRequestId) {
+        if (!currentSession.value) {
           ElMessage.warning('当前会话还没有可查看的数据来源');
           return;
         }
-        await loadAnswerExplainByRuntimeRequestId(runtimeRequestId);
+        answerExplainVisible.value = true;
+        await Promise.all([loadLatestTrace(), loadLatestAnswerExplain()]);
       };
 
       const formatExplainValue = (value: unknown) => {
@@ -1867,21 +2038,48 @@
         }
       };
 
+      const asExplainStringList = (value: unknown): string[] => {
+        if (!Array.isArray(value)) {
+          return [];
+        }
+        return value
+          .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+          .map((item) => item.trim());
+      };
+
       const summarizeExplainExecution = (explain: AnswerTraceExplain | null) => {
         if (!explain) {
           return '当前还没有可展示的执行说明。';
         }
-        if (explain.datasource || explain.usedTables.length > 0 || explain.usedColumns.length > 0) {
-          return '本轮回答访问了结构化数据源，下面展示的是实际使用到的表、字段、权限范围和统计信息。';
+        const hasDatasourceEvidence =
+          Boolean(explain.datasource || explain.sql) ||
+          explain.usedTables.length > 0 ||
+          explain.usedColumns.length > 0;
+        const hasSemanticEvidence = explain.semanticHits.length > 0;
+        const hasKnowledgeEvidence = explain.knowledgeHits.length > 0;
+        if (hasDatasourceEvidence && hasSemanticEvidence && hasKnowledgeEvidence) {
+          return '本轮回答同时使用了结构化数据源、语义模型召回和 RAG/知识召回，下面展示的是完整来源。';
         }
-        if (explain.knowledgeHits.length > 0) {
-          return '本轮回答没有访问数据库，但命中了知识检索结果，回答受这些知识片段影响。';
+        if (hasDatasourceEvidence && hasSemanticEvidence) {
+          return '本轮回答同时使用了结构化数据源和语义模型召回，下面展示的是 SQL 来源与语义来源。';
         }
-        if (explain.semanticHits.length > 0) {
+        if (hasDatasourceEvidence && hasKnowledgeEvidence) {
+          return '本轮回答同时使用了结构化数据源和 RAG/知识召回，下面展示的是 SQL 来源与知识来源。';
+        }
+        if (hasDatasourceEvidence) {
+          return '本轮回答访问了结构化数据源，下面展示的是实际执行过的数据源步骤、SQL、使用表和使用字段。';
+        }
+        if (hasKnowledgeEvidence && hasSemanticEvidence) {
+          return '本轮回答没有直接查库，但同时命中了语义模型和 RAG/知识召回，回答受这些来源共同影响。';
+        }
+        if (hasKnowledgeEvidence) {
+          return '本轮回答没有直接查库，但命中了 RAG/知识召回结果，回答受这些知识片段影响。';
+        }
+        if (hasSemanticEvidence) {
           return '本轮回答没有直接查库，但命中了语义模型，用来帮助系统理解你的问题和业务字段。';
         }
-        if (explain.toolSteps.length > 0) {
-          return '本轮回答没有形成可展示的数据源明细，但系统执行过工具步骤，详细过程可在下方执行过程里查看。';
+        if (explain.toolSteps.length > 0 || (explain.clarify && Object.keys(explain.clarify).length > 0)) {
+          return '本轮回答没有形成可展示的查库明细，但系统执行过澄清或其他工具步骤，详细过程可在下方查看。';
         }
         return '本轮回答没有访问数据库、知识库或其他可回放工具，当前结果主要来自模型直接生成。';
       };
@@ -2278,7 +2476,7 @@
 
           // 保存已接收的节点消息
           if (sessionState.nodeBlocks && sessionState.nodeBlocks.length > 0) {
-            const saveNodeMessage = (node: GraphNodeResponse[]): Promise<void> => {
+            const saveNodeMessage = (node: AgentResponse[]): Promise<void> => {
               return saveAssistantNodeMessage(sessionId, node, sessionState.lastRequest).catch(
                 error => {
                   console.error('保存AI消息失败:', error);
@@ -2383,7 +2581,7 @@
       };
 
       // 从节点块中提取 Markdown 内容
-      const getMarkdownContentFromNode = (node: GraphNodeResponse[]): string => {
+      const getMarkdownContentFromNode = (node: AgentResponse[]): string => {
         if (!node || node.length === 0) {
           return '';
         }
@@ -2472,6 +2670,7 @@
         formatTraceTime,
         formatTraceOffset,
         formatExplainValue,
+        asExplainStringList,
         summarizeExplainExecution,
         isStructuredTraceValue,
         formatStructuredTraceValue,
@@ -3187,6 +3386,17 @@
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 13px;
     line-height: 1.8;
+  }
+
+  .answer-explain-inline-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #1e3a5f;
+    line-height: 1.8;
+  }
+
+  .answer-explain-inline-list li + li {
+    margin-top: 6px;
   }
 
   .answer-explain-warning-list {

@@ -19,7 +19,7 @@ import com.alibaba.cloud.ai.dataagent.bo.DbConfigBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ColumnInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ForeignKeyInfoBO;
 import com.alibaba.cloud.ai.dataagent.bo.schema.ResultSetBO;
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.connector.DbQueryParameter;
 import com.alibaba.cloud.ai.dataagent.connector.accessor.Accessor;
 import com.alibaba.cloud.ai.dataagent.connector.accessor.AccessorFactory;
@@ -117,7 +117,7 @@ public class DatasourceExplorerService {
 	}
 
 	public DatasourceExplorerResult execute(String agentId, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) throws Exception {
+			@Nullable AgentRequest graphRequest) throws Exception {
 		if (request == null || request.getAction() == null) {
 			throw new IllegalArgumentException("数据源探索请求必须提供 action");
 		}
@@ -133,7 +133,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult listTables(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) {
+			@Nullable AgentRequest graphRequest) {
 		int limit = normalizeLimit(request.getLimit());
 		Map<String, Document> tableDocumentMap = loadTableDocumentMap(context, context.visibleTables());
 		List<Map<String, Object>> tables = context.visibleTables()
@@ -150,7 +150,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult findTables(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) {
+			@Nullable AgentRequest graphRequest) {
 		int limit = normalizeLimit(request.getLimit());
 		String query = StringUtils.trimToEmpty(request.getQuery()).toLowerCase(Locale.ROOT);
 		Map<String, Document> tableDocumentMap = loadTableDocumentMap(context, context.visibleTables());
@@ -169,7 +169,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult getTableSchema(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) throws Exception {
+			@Nullable AgentRequest graphRequest) throws Exception {
 		String tableName = resolveVisibleTableName(context, requireSingleTableName(request));
 		List<ColumnInfoBO> columns = context.accessor()
 			.showColumns(context.dbConfig(),
@@ -195,7 +195,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult getRelatedTables(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) {
+			@Nullable AgentRequest graphRequest) {
 		String tableName = resolveVisibleTableName(context, requireSingleTableName(request));
 		List<UnifiedRelation> relations = filterRelations(context, tableName);
 		List<Map<String, Object>> relationEntries = relations.stream().map(this::toRelationEntry).toList();
@@ -218,7 +218,7 @@ public class DatasourceExplorerService {
 	}
 
 	private DatasourceExplorerResult previewRows(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) throws Exception {
+			@Nullable AgentRequest graphRequest) throws Exception {
 		String tableName = resolveVisibleTableName(context, requireSingleTableName(request));
 		int limit = normalizeLimit(request.getLimit());
 		String sql = SqlUtil.buildSelectSql(context.dbConfig().getDialectType(),
@@ -231,12 +231,18 @@ public class DatasourceExplorerService {
 			.columns(toColumnHeaders(resultSet))
 			.rows(toRows(resultSet))
 			.sql(sql)
+			.usedTables(List.of(tableName))
+			.usedColumns(toExplainColumns(resultSet))
+			.resultScope("预览结果仅包含当前可见字段，并受 limit 限制。")
+			.resultScopeDetails(buildPreviewResultScopeDetails(tableName, resultSet, limit))
+			.decisionReason("当前通过 PREVIEW_ROWS 直接预览单表数据，用于快速确认表内容。")
+			.toolDecisionReasons(buildPreviewDecisionReasons(tableName, limit))
 			.searchReady(true)
 			.build(), graphRequest);
 	}
 
 	private DatasourceExplorerResult search(ExplorerContext context, DatasourceExplorerRequest request,
-			@Nullable GraphRequest graphRequest) throws Exception {
+			@Nullable AgentRequest graphRequest) throws Exception {
 		String rawSql = StringUtils.trimToNull(request.getSql());
 		if (rawSql == null) {
 			throw new IllegalArgumentException("search action 必须提供 sql");
@@ -244,11 +250,21 @@ public class DatasourceExplorerService {
 		int limit = normalizeLimit(request.getLimit());
 		SqlGuardedQuery guardedQuery = guardReadonlySql(context, rawSql, limit);
 		ResultSetBO resultSet = filterResultSet(executeSql(context, guardedQuery.sql()), guardedQuery);
+		List<Map<String, Object>> relationEvidence = collectRelationEvidence(context, guardedQuery.referencedTables());
+		List<String> usedTables = toExplainTables(guardedQuery.referencedTables(), context.visibleTablesByName());
+		List<String> usedColumns = toExplainColumns(resultSet);
 		return capture(baseResult(context, DatasourceExplorerAction.SEARCH,
 				("已执行只读查询，返回 %d 行结果".formatted(resultSet.getData().size())) + HIDDEN_FIELD_INFERENCE_WARNING)
 			.columns(toColumnHeaders(resultSet))
 			.rows(toRows(resultSet))
 			.sql(guardedQuery.sql())
+			.usedTables(usedTables)
+			.usedColumns(usedColumns)
+			.relationEvidence(relationEvidence)
+			.resultScope(buildResultScopeSummary(resultSet, limit))
+			.resultScopeDetails(buildSearchResultScopeDetails(resultSet, limit, guardedQuery.allowedResultHeaders()))
+			.decisionReason(buildDecisionReason(guardedQuery.referencedTables(), relationEvidence))
+			.toolDecisionReasons(buildSearchDecisionReasons(usedTables, relationEvidence, limit))
 			.searchReady(true)
 			.build(), graphRequest);
 	}
@@ -631,6 +647,115 @@ public class DatasourceExplorerService {
 		return resultSet.getColumn().stream().map(column -> Map.<String, Object>of("name", column)).toList();
 	}
 
+	private List<String> toExplainColumns(ResultSetBO resultSet) {
+		return Optional.ofNullable(resultSet.getColumn())
+			.orElse(List.of())
+			.stream()
+			.filter(StringUtils::isNotBlank)
+			.map(String::trim)
+			.distinct()
+			.toList();
+	}
+
+	private List<String> toExplainTables(Set<String> referencedTables, Map<String, List<String>> visibleTablesByName) {
+		if (referencedTables == null || referencedTables.isEmpty()) {
+			return List.of();
+		}
+		return referencedTables.stream().map(tableName -> {
+			List<String> candidates = visibleTablesByName.getOrDefault(normalizeTableName(tableName), List.of());
+			return candidates.isEmpty() ? tableName : candidates.get(0);
+		}).distinct().toList();
+	}
+
+	private List<Map<String, Object>> collectRelationEvidence(ExplorerContext context, Set<String> referencedTables) {
+		if (referencedTables == null || referencedTables.size() < 2) {
+			return List.of();
+		}
+		Set<String> normalizedReferencedTables = referencedTables.stream()
+			.map(this::normalizeTableName)
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+		return context.unifiedRelations()
+			.stream()
+			.filter(relation -> normalizedReferencedTables.contains(normalizeTableName(relation.sourceTable()))
+					&& normalizedReferencedTables.contains(normalizeTableName(relation.targetTable())))
+				.map(this::toRelationEntry)
+				.toList();
+	}
+
+	private String buildResultScopeSummary(ResultSetBO resultSet, int limit) {
+		int rowCount = resultSet.getData() == null ? 0 : resultSet.getData().size();
+		int columnCount = resultSet.getColumn() == null ? 0 : resultSet.getColumn().size();
+		if (rowCount >= limit) {
+			return "当前结果仅展示前 %d 行、%d 个返回字段；字段范围已经过可见性裁剪。".formatted(limit, columnCount);
+		}
+		return "当前结果展示 %d 行、%d 个返回字段；字段范围已经过可见性裁剪。".formatted(rowCount, columnCount);
+	}
+
+	private String buildDecisionReason(Set<String> referencedTables, List<Map<String, Object>> relationEvidence) {
+		List<String> usedTables = toExplainTables(referencedTables, Map.of());
+		if (!relationEvidence.isEmpty()) {
+			return "本轮选择执行 SQL，是因为问题需要跨表查数；表间关联优先依据已配置的物理外键或逻辑关系。";
+		}
+		if (usedTables.size() > 1) {
+			return "本轮选择执行 SQL，是因为问题需要联合多张表获取结构化结果。";
+		}
+		if (usedTables.size() == 1) {
+			return "本轮选择执行 SQL，是因为问题需要直接从目标表提取结构化结果。";
+		}
+		return "本轮选择执行 SQL，是因为问题需要结构化数据结果来支撑回答。";
+	}
+
+	private List<String> buildPreviewDecisionReasons(String tableName, int limit) {
+		return List.of("本轮直接选择 PREVIEW_ROWS，是为了快速确认单表“%s”的样例数据。".formatted(tableName),
+				"预览查询会自动附带 limit=%d，避免一次返回过多行。".formatted(limit));
+	}
+
+	private List<String> buildSearchDecisionReasons(List<String> usedTables,
+			List<Map<String, Object>> relationEvidence, int limit) {
+		List<String> reasons = new ArrayList<>();
+		reasons.add("本轮选择执行 SQL，是因为回答需要结构化结果来支撑结论。");
+		if (!usedTables.isEmpty()) {
+			reasons.add("实际命中的表有：%s。".formatted(String.join("、", usedTables)));
+		}
+		if (usedTables.size() > 1) {
+			reasons.add("由于问题涉及多张表，系统需要联合查询后再生成答案。");
+		}
+		if (!relationEvidence.isEmpty()) {
+			reasons.add("多表关联优先依据已配置的物理外键或逻辑关系，而不是临时猜测关联条件。");
+		}
+		reasons.add("查询结果默认限制为最多 %d 行，避免一次返回过多数据。".formatted(limit));
+		return List.copyOf(reasons);
+	}
+
+	private List<String> buildPreviewResultScopeDetails(String tableName, ResultSetBO resultSet, int limit) {
+		List<String> details = new ArrayList<>();
+		details.add("当前展示的是表“%s”的预览结果，不代表完整数据集。".formatted(tableName));
+		details.add("本次共返回 %d 行、%d 个字段。".formatted(resultSet.getData() == null ? 0 : resultSet.getData().size(),
+				resultSet.getColumn() == null ? 0 : resultSet.getColumn().size()));
+		details.add("预览结果仅包含当前 Agent 可见字段。");
+		details.add("预览查询使用了 limit=%d。".formatted(limit));
+		details.add("禁止根据未返回字段推断隐藏信息。");
+		return List.copyOf(details);
+	}
+
+	private List<String> buildSearchResultScopeDetails(ResultSetBO resultSet, int limit, Set<String> allowedHeaders) {
+		List<String> details = new ArrayList<>();
+		int rowCount = resultSet.getData() == null ? 0 : resultSet.getData().size();
+		int columnCount = resultSet.getColumn() == null ? 0 : resultSet.getColumn().size();
+		details.add("当前结果共返回 %d 行、%d 个字段。".formatted(rowCount, columnCount));
+		details.add("查询结果最多展示 %d 行。".formatted(limit));
+		if (allowedHeaders != null && !allowedHeaders.isEmpty()) {
+			details.add("最终仅保留 SQL select 列表中显式声明的返回字段。");
+			details.add("允许返回的字段有：%s。".formatted(String.join("、", allowedHeaders)));
+		}
+		else {
+			details.add("当前 SQL 未触发额外的结果列过滤。");
+		}
+		details.add("所有结果仍受字段可见性约束限制。");
+		details.add("禁止根据未返回字段推断隐藏信息。");
+		return List.copyOf(details);
+	}
+
 	private List<Map<String, Object>> toRows(ResultSetBO resultSet) {
 		return resultSet.getData().stream().map(row -> {
 			Map<String, Object> mappedRow = new LinkedHashMap<>();
@@ -864,7 +989,7 @@ public class DatasourceExplorerService {
 			.summary(summary);
 	}
 
-	private DatasourceExplorerResult capture(DatasourceExplorerResult result, @Nullable GraphRequest graphRequest) {
+	private DatasourceExplorerResult capture(DatasourceExplorerResult result, @Nullable AgentRequest graphRequest) {
 		if (graphRequest != null) {
 			answerTraceExplainStore.recordDatasourceResult(graphRequest, result);
 		}

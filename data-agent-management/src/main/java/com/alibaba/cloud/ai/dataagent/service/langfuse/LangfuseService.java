@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.langfuse;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
@@ -78,7 +78,7 @@ public class LangfuseService {
 	/**
 	 * 开始一个 Graph 流式处理的 Span，记录完整的请求上下文
 	 */
-	public Span startLLMSpan(String spanName, GraphRequest request) {
+	public Span startLLMSpan(String spanName, AgentRequest request) {
 		if (!enabled) {
 			return Span.getInvalid();
 		}

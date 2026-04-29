@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.tool.semantic;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.entity.AgentDatasource;
 import com.alibaba.cloud.ai.dataagent.entity.SemanticModel;
 import com.alibaba.cloud.ai.dataagent.observability.AnswerTraceExplainStore;
@@ -51,7 +51,7 @@ public class SemanticModelSearchService {
 	}
 
 	public SemanticModelSearchResult search(String agentId, SemanticModelSearchRequest request,
-			@Nullable GraphRequest graphRequest) {
+			@Nullable AgentRequest agentRequest) {
 		if (!StringUtils.hasText(agentId)) {
 			return emptyResult(request == null ? null : request.getQuery(),
 					"semantic_model.search 需要数值型 agentId 参数。");
@@ -64,7 +64,7 @@ public class SemanticModelSearchService {
 			return emptyResult(request == null ? null : request.getQuery(),
 					"semantic_model.search 需要数值型 agentId 参数。");
 		}
-		return search(parsedAgentId, request, graphRequest);
+		return search(parsedAgentId, request, agentRequest);
 	}
 
 	public SemanticModelSearchResult search(Long agentId, SemanticModelSearchRequest request) {
@@ -72,7 +72,7 @@ public class SemanticModelSearchService {
 	}
 
 	public SemanticModelSearchResult search(Long agentId, SemanticModelSearchRequest request,
-			@Nullable GraphRequest graphRequest) {
+			@Nullable AgentRequest agentRequest) {
 		String query = request == null ? null : request.getQuery();
 		if (!StringUtils.hasText(query)) {
 			throw new IllegalArgumentException("semantic_model.search 需要 query 参数");
@@ -118,8 +118,8 @@ public class SemanticModelSearchService {
 		List<SemanticModelSearchHit> hits = scoredHits.stream().map(this::toHit).toList();
 		String summary = "共匹配到 %d 条补充语义提示。这些结果只用于补充理解表和字段语义，不能替代数据源探索工具的物理结构探索。"
 			.formatted(hits.size());
-		if (graphRequest != null) {
-			answerTraceExplainStore.recordSemanticSearch(graphRequest, query,
+		if (agentRequest != null) {
+			answerTraceExplainStore.recordSemanticSearch(agentRequest, query,
 					"共匹配到 %d 条补充语义提示".formatted(hits.size()), hits);
 		}
 		else {

@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.service.impl;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.AgentRuntimeEventPublisher;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.AgentRuntimeExtensionFactory;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.QueryClarifyService;
@@ -28,7 +28,7 @@ import com.alibaba.cloud.ai.dataagent.agentscope.template.AgentRunContext;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.AgentRuntimeExtensions;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.ManagedAgent;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.ManagedAgentRegistry;
-import com.alibaba.cloud.ai.dataagent.agentscope.vo.GraphNodeResponse;
+import com.alibaba.cloud.ai.dataagent.agentscope.vo.AgentResponse;
 import com.alibaba.cloud.ai.dataagent.constant.AgentRuntimeConstant;
 import com.alibaba.cloud.ai.dataagent.enums.ModelType;
 import com.alibaba.cloud.ai.dataagent.enums.TextType;
@@ -116,7 +116,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	@Override
 	public String nl2sql(String naturalQuery, String agentId) {
 		log.info("NL2SQL runtime invoked for agentId={}", agentId);
-		GraphRequest request = GraphRequest.builder().agentId(agentId).query(naturalQuery).nl2sqlOnly(true).build();
+		AgentRequest request = AgentRequest.builder().agentId(agentId).query(naturalQuery).nl2sqlOnly(true).build();
 		initializeRuntimeRequest(request);
 		sessionRegistry.register(request.getThreadId(), request.getRuntimeRequestId());
 		try {
@@ -128,10 +128,10 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	}
 
 	@Override
-	public void graphStreamProcess(Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink, GraphRequest graphRequest) {
-		initializeRuntimeRequest(graphRequest);
-		String threadId = graphRequest.getThreadId();
-		String runtimeRequestId = graphRequest.getRuntimeRequestId();
+	public void graphStreamProcess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest agentRequest) {
+		initializeRuntimeRequest(agentRequest);
+		String threadId = agentRequest.getThreadId();
+		String runtimeRequestId = agentRequest.getRuntimeRequestId();
 		StreamTextTracker streamTextTracker = new StreamTextTracker();
 		sessionRegistry.register(threadId, runtimeRequestId);
 		AgentRuntimeEventPublisher eventPublisher = response -> {
@@ -145,11 +145,11 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 			sink.tryEmitNext(ServerSentEvent.builder(response).event(STREAM_EVENT_MESSAGE).build());
 		};
 
-		Mono.fromCallable(() -> executeAgent(graphRequest, eventPublisher))
+		Mono.fromCallable(() -> executeAgent(agentRequest, eventPublisher))
 			.doFinally(signalType -> sessionRegistry.finish(threadId, runtimeRequestId))
 			.subscribeOn(Schedulers.boundedElastic())
-			.subscribe(result -> emitSuccess(sink, graphRequest, result, streamTextTracker),
-					error -> emitError(sink, graphRequest, error));
+			.subscribe(result -> emitSuccess(sink, agentRequest, result, streamTextTracker),
+					error -> emitError(sink, agentRequest, error));
 	}
 
 	@Override
@@ -157,15 +157,15 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		sessionRegistry.markCancelled(threadId, runtimeRequestId);
 	}
 
-	private void emitSuccess(Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink, GraphRequest request, String result,
-			StreamTextTracker streamTextTracker) {
+	private void emitSuccess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest request, String result,
+                             StreamTextTracker streamTextTracker) {
 		String threadId = request.getThreadId();
 		String runtimeRequestId = request.getRuntimeRequestId();
 		if (!sessionRegistry.isActive(threadId, runtimeRequestId)) {
 			return;
 		}
 		if (shouldEmitFinalResponse(result, streamTextTracker)) {
-			GraphNodeResponse response = GraphNodeResponse.builder()
+			AgentResponse response = AgentResponse.builder()
 				.agentId(request.getAgentId())
 				.threadId(threadId)
 				.nodeName(RUNTIME_NODE_NAME)
@@ -174,7 +174,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 				.build();
 			sink.tryEmitNext(ServerSentEvent.builder(response).event(STREAM_EVENT_MESSAGE).build());
 		}
-		sink.tryEmitNext(ServerSentEvent.builder(GraphNodeResponse.complete(request.getAgentId(), threadId))
+		sink.tryEmitNext(ServerSentEvent.builder(AgentResponse.complete(request.getAgentId(), threadId))
 			.event(STREAM_EVENT_COMPLETE)
 			.build());
 		sink.tryEmitComplete();
@@ -184,7 +184,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		return StringUtils.hasText(result) && !streamTextTracker.containsFinalAnswer(result);
 	}
 
-	private void emitError(Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink, GraphRequest request, Throwable error) {
+	private void emitError(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest request, Throwable error) {
 		String threadId = request.getThreadId();
 		String runtimeRequestId = request.getRuntimeRequestId();
 		if (sessionRegistry.isCancelled(threadId, runtimeRequestId)) {
@@ -195,18 +195,18 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		log.error("AgentScope runtime failed, threadId={}", threadId, error);
 		if (sessionRegistry.isActive(threadId, runtimeRequestId)) {
 			String message = error.getMessage() == null ? "AgentScope 运行失败。" : error.getMessage();
-			sink.tryEmitNext(ServerSentEvent.builder(GraphNodeResponse.error(request.getAgentId(), threadId, message))
+			sink.tryEmitNext(ServerSentEvent.builder(AgentResponse.error(request.getAgentId(), threadId, message))
 				.event(STREAM_EVENT_ERROR)
 				.build());
 			sink.tryEmitComplete();
 		}
 	}
 
-	private String executeAgent(GraphRequest request) {
+	private String executeAgent(AgentRequest request) {
 		return executeAgent(request, null);
 	}
 
-	private void initializeRuntimeRequest(GraphRequest request) {
+	private void initializeRuntimeRequest(AgentRequest request) {
 		if (!StringUtils.hasText(request.getThreadId())) {
 			request.setThreadId(UUID.randomUUID().toString());
 		}
@@ -215,7 +215,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		}
 	}
 
-	private String executeAgent(GraphRequest request, AgentRuntimeEventPublisher eventPublisher) {
+	private String executeAgent(AgentRequest request, AgentRuntimeEventPublisher eventPublisher) {
 		sessionRegistry.markRunning(request.getThreadId(), request.getRuntimeRequestId(), Thread.currentThread());
 		answerTraceExplainStore.openScope(request);
 		Span rootSpan = startRuntimeSpan(request);
@@ -283,7 +283,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		}
 	}
 
-	private Span startRuntimeSpan(GraphRequest request) {
+	private Span startRuntimeSpan(AgentRequest request) {
 		Span span = tracer.spanBuilder(ROOT_SPAN_NAME).startSpan();
 		span.setAttribute(SessionTraceStore.ATTR_THREAD_ID, request.getThreadId());
 		span.setAttribute(SessionTraceStore.ATTR_RUNTIME_REQUEST_ID, request.getRuntimeRequestId());
@@ -302,8 +302,8 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		rootSpan.recordException(throwable);
 	}
 
-	private String blockForClarification(GraphRequest request, AgentRuntimeEventPublisher eventPublisher, Span rootSpan,
-			QueryClarifyAssessment clarifyAssessment) {
+	private String blockForClarification(AgentRequest request, AgentRuntimeEventPublisher eventPublisher, Span rootSpan,
+                                         QueryClarifyAssessment clarifyAssessment) {
 		String clarifyText = clarifyAssessment.userMessage();
 		answerTraceExplainStore.recordFinalAnswer(clarifyText);
 		persistAnswerExplainSnapshot(request);
@@ -312,7 +312,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		if (eventPublisher != null) {
 			Map<String, Object> metadata = new LinkedHashMap<>(clarifyAssessment.toMetadata());
 			metadata.put("originalQuery", request.getQuery());
-			eventPublisher.publish(GraphNodeResponse.builder()
+			eventPublisher.publish(AgentResponse.builder()
 				.agentId(request.getAgentId())
 				.threadId(request.getThreadId())
 				.nodeName(RUNTIME_NODE_NAME)
@@ -324,7 +324,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		return clarifyText;
 	}
 
-	private void mirrorExplainSummary(Span rootSpan, GraphRequest request) {
+	private void mirrorExplainSummary(Span rootSpan, AgentRequest request) {
 		if (rootSpan == null || request == null) {
 			return;
 		}
@@ -340,7 +340,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 			});
 	}
 
-	private void persistAnswerExplainSnapshot(GraphRequest request) {
+	private void persistAnswerExplainSnapshot(AgentRequest request) {
 		if (request == null || !StringUtils.hasText(request.getThreadId())
 				|| !StringUtils.hasText(request.getRuntimeRequestId())) {
 			return;
@@ -365,7 +365,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		});
 	}
 
-	private String buildAnswerExplainMetadata(GraphRequest request) throws Exception {
+	private String buildAnswerExplainMetadata(AgentRequest request) throws Exception {
 		Map<String, Object> metadata = new LinkedHashMap<>();
 		metadata.put("kind", "answer-explain");
 		metadata.put("runtimeRequestId", request.getRuntimeRequestId());
@@ -404,7 +404,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 		return agent.getPrompt();
 	}
 
-	private String buildUserPrompt(GraphRequest request) {
+	private String buildUserPrompt(AgentRequest request) {
 		return request.getQuery() == null ? "" : request.getQuery();
 	}
 

@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.service.knowledge;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.constant.DocumentMetadataConstant;
 import com.alibaba.cloud.ai.dataagent.entity.AgentKnowledge;
 import com.alibaba.cloud.ai.dataagent.entity.BusinessKnowledge;
@@ -25,9 +25,7 @@ import com.alibaba.cloud.ai.dataagent.mapper.BusinessKnowledgeMapper;
 import com.alibaba.cloud.ai.dataagent.observability.AnswerTraceExplainStore;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.AgentVectorStoreService;
 import com.alibaba.cloud.ai.dataagent.service.vectorstore.DynamicFilterService;
-import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.DomainKnowledgeSearchRequest;
-import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.DomainKnowledgeSearchResult;
-import com.alibaba.cloud.ai.dataagent.service.knowledge.DomainKnowledgeSearchService.KnowledgeHit;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -77,7 +75,7 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 
 	@Override
 	public DomainKnowledgeSearchResult search(String agentId, DomainKnowledgeSearchRequest request,
-			@Nullable GraphRequest graphRequest) {
+			@Nullable AgentRequest agentRequest) {
 		Assert.hasText(agentId, "AgentId cannot be empty");
 		Assert.notNull(request, "Search request cannot be null");
 		String query = requireText(request.query(), "Query cannot be blank");
@@ -129,8 +127,8 @@ public class DomainKnowledgeSearchServiceImpl implements DomainKnowledgeSearchSe
 		String resolution = hits.isEmpty() ? "no_match" : "matched";
 		DomainKnowledgeSearchResult result = new DomainKnowledgeSearchResult(List.copyOf(hits), List.copyOf(warnings),
 				resolution);
-		if (graphRequest != null) {
-			answerTraceExplainStore.recordKnowledgeSearch(graphRequest, result);
+		if (agentRequest != null) {
+			answerTraceExplainStore.recordKnowledgeSearch(agentRequest, result);
 		}
 		else {
 			answerTraceExplainStore.recordKnowledgeSearch(result);

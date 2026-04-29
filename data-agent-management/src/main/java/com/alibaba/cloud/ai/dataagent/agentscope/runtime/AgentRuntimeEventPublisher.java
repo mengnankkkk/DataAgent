@@ -15,11 +15,11 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.vo.GraphNodeResponse;
+import com.alibaba.cloud.ai.dataagent.agentscope.vo.AgentResponse;
 
 @FunctionalInterface
 public interface AgentRuntimeEventPublisher {
 
-	void publish(GraphNodeResponse response);
+	void publish(AgentResponse response);
 
 }

@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import io.agentscope.core.tool.ToolExecutionContext;
 import java.util.Map;
 import org.springframework.ai.chat.model.ToolContext;
@@ -28,22 +28,22 @@ public final class ToolContextRequestResolver {
 	}
 
 	@Nullable
-	public static GraphRequest resolveGraphRequest(@Nullable ToolContext toolContext) {
+	public static AgentRequest resolveGraphRequest(@Nullable ToolContext toolContext) {
 		if (toolContext == null || toolContext.getContext() == null) {
 			return null;
 		}
 		Map<String, Object> context = toolContext.getContext();
 		Object graphRequest = context.get("graphRequest");
-		if (graphRequest instanceof GraphRequest request) {
+		if (graphRequest instanceof AgentRequest request) {
 			return request;
 		}
 		Object agentScopeContext = context.get("agentScopeContext");
 		if (agentScopeContext instanceof ToolExecutionContext toolExecutionContext) {
-			GraphRequest request = toolExecutionContext.get("graphRequest", GraphRequest.class);
+			AgentRequest request = toolExecutionContext.get("graphRequest", AgentRequest.class);
 			if (request != null) {
 				return request;
 			}
-			GraphRequest metadataRequest = fromMetadata(toolExecutionContext.get(AgentRuntimeRequestMetadata.class));
+			AgentRequest metadataRequest = fromMetadata(toolExecutionContext.get(AgentRuntimeRequestMetadata.class));
 			if (metadataRequest != null) {
 				return metadataRequest;
 			}
@@ -56,12 +56,12 @@ public final class ToolContextRequestResolver {
 	}
 
 	@Nullable
-	private static GraphRequest fromMetadata(@Nullable AgentRuntimeRequestMetadata metadata) {
+	private static AgentRequest fromMetadata(@Nullable AgentRuntimeRequestMetadata metadata) {
 		if (metadata == null || !StringUtils.hasText(metadata.threadId())
 				|| !StringUtils.hasText(metadata.runtimeRequestId())) {
 			return null;
 		}
-		return GraphRequest.builder()
+		return AgentRequest.builder()
 			.agentId(metadata.agentId())
 			.threadId(metadata.threadId())
 			.runtimeRequestId(metadata.runtimeRequestId())

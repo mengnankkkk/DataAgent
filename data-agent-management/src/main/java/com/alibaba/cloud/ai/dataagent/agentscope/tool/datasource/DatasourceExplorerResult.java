@@ -47,4 +47,23 @@ public class DatasourceExplorerResult {
 
 	private String sql;
 
+	@Builder.Default
+	private List<String> usedTables = new ArrayList<>();
+
+	@Builder.Default
+	private List<String> usedColumns = new ArrayList<>();
+
+	@Builder.Default
+	private List<Map<String, Object>> relationEvidence = new ArrayList<>();
+
+	@Builder.Default
+	private List<String> toolDecisionReasons = new ArrayList<>();
+
+	@Builder.Default
+	private List<String> resultScopeDetails = new ArrayList<>();
+
+	private String resultScope;
+
+	private String decisionReason;
+
 }

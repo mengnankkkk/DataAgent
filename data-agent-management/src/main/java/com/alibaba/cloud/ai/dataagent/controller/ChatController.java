@@ -141,6 +141,16 @@ public class ChatController {
 			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
+	@GetMapping("/sessions/{sessionId}/answers/latest/explain")
+	public ResponseEntity<?> getLatestAnswerExplain(@PathVariable(value = "sessionId") String sessionId,
+			@RequestParam(value = "agentId") Long agentId) {
+		chatSessionService.requireSessionForAgent(sessionId, agentId);
+		return answerTraceExplainStore.getLatestExplain(sessionId)
+			.<ResponseEntity<?>>map(ResponseEntity::ok)
+			.or(() -> loadLatestPersistedAnswerExplain(sessionId, agentId).map(ResponseEntity::ok))
+			.orElseGet(() -> ResponseEntity.notFound().build());
+	}
+
 	@GetMapping("/sessions/{sessionId}/answers/{runtimeRequestId}/explain")
 	public ResponseEntity<?> getAnswerExplain(@PathVariable(value = "sessionId") String sessionId,
 			@RequestParam(value = "agentId") Long agentId,
@@ -150,6 +160,31 @@ public class ChatController {
 			.<ResponseEntity<?>>map(ResponseEntity::ok)
 			.or(() -> loadPersistedAnswerExplain(sessionId, runtimeRequestId, agentId).map(ResponseEntity::ok))
 			.orElseGet(() -> ResponseEntity.notFound().build());
+	}
+
+	private java.util.Optional<JsonNode> loadLatestPersistedAnswerExplain(String sessionId, Long agentId) {
+		List<ChatMessage> snapshots = chatMessageService.findBySessionIdAndMessageType(sessionId,
+				ANSWER_EXPLAIN_MESSAGE_TYPE, agentId);
+		JsonNode latestExplainNode = null;
+		long latestUpdatedAt = Long.MIN_VALUE;
+		for (ChatMessage snapshot : snapshots) {
+			if (snapshot == null || !StringUtils.hasText(snapshot.getContent())) {
+				continue;
+			}
+			try {
+				JsonNode explainNode = objectMapper.readTree(snapshot.getContent());
+				long updatedAt = explainNode.path("updatedAt").asLong(Long.MIN_VALUE);
+				if (latestExplainNode == null || updatedAt >= latestUpdatedAt) {
+					latestExplainNode = explainNode;
+					latestUpdatedAt = updatedAt;
+				}
+			}
+			catch (Exception ex) {
+				log.warn("Failed to parse persisted answer explain snapshot. sessionId={}, messageId={}", sessionId,
+						snapshot.getId(), ex);
+			}
+		}
+		return java.util.Optional.ofNullable(latestExplainNode);
 	}
 
 	private java.util.Optional<JsonNode> loadPersistedAnswerExplain(String sessionId, String runtimeRequestId,

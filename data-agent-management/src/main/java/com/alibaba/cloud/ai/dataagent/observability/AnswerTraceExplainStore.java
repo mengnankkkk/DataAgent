@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.observability;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.QueryClarifyService.QueryClarifyAssessment;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.datasource.DatasourceExplorerResult;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.semantic.SemanticModelSearchHit;
@@ -49,7 +49,7 @@ public class AnswerTraceExplainStore {
 	private final LinkedHashMap<String, LinkedHashMap<String, ExplainAssembly>> explainsBySession = new LinkedHashMap<>(
 			32, 0.75f, true);
 
-	public void openScope(GraphRequest request) {
+	public void openScope(AgentRequest request) {
 		if (request == null || !StringUtils.hasText(request.getThreadId())
 				|| !StringUtils.hasText(request.getRuntimeRequestId())) {
 			return;
@@ -84,7 +84,7 @@ public class AnswerTraceExplainStore {
 		});
 	}
 
-	public void recordClarifyAssessment(GraphRequest request, QueryClarifyAssessment assessment) {
+	public void recordClarifyAssessment(AgentRequest request, QueryClarifyAssessment assessment) {
 		if (assessment == null) {
 			return;
 		}
@@ -95,7 +95,7 @@ public class AnswerTraceExplainStore {
 		withCurrentAssembly(assembly -> applySemanticSearch(assembly, query, summary, hits));
 	}
 
-	public void recordSemanticSearch(GraphRequest request, String query, String summary,
+	public void recordSemanticSearch(AgentRequest request, String query, String summary,
 			List<SemanticModelSearchHit> hits) {
 		withAssembly(request, assembly -> applySemanticSearch(assembly, query, summary, hits));
 	}
@@ -107,7 +107,7 @@ public class AnswerTraceExplainStore {
 		withCurrentAssembly(assembly -> applyKnowledgeSearch(assembly, result));
 	}
 
-	public void recordKnowledgeSearch(GraphRequest request, DomainKnowledgeSearchResult result) {
+	public void recordKnowledgeSearch(AgentRequest request, DomainKnowledgeSearchResult result) {
 		if (result == null) {
 			return;
 		}
@@ -121,7 +121,7 @@ public class AnswerTraceExplainStore {
 		withCurrentAssembly(assembly -> applyDatasourceResult(assembly, result));
 	}
 
-	public void recordDatasourceResult(GraphRequest request, DatasourceExplorerResult result) {
+	public void recordDatasourceResult(AgentRequest request, DatasourceExplorerResult result) {
 		if (result == null) {
 			return;
 		}
@@ -145,6 +145,23 @@ public class AnswerTraceExplainStore {
 		}
 	}
 
+	public Optional<AnswerTraceExplainView> getLatestExplain(String sessionId) {
+		if (!StringUtils.hasText(sessionId)) {
+			return Optional.empty();
+		}
+		synchronized (monitor) {
+			LinkedHashMap<String, ExplainAssembly> explainsByRequest = explainsBySession.get(sessionId);
+			if (explainsByRequest == null || explainsByRequest.isEmpty()) {
+				return Optional.empty();
+			}
+			ExplainAssembly latestAssembly = explainsByRequest.values()
+				.stream()
+				.max(java.util.Comparator.comparingLong(assembly -> assembly.updatedAt))
+				.orElse(null);
+			return latestAssembly == null ? Optional.empty() : Optional.of(latestAssembly.toView());
+		}
+	}
+
 	public Optional<ExplainMirrorSummary> getMirrorSummary(String sessionId, String runtimeRequestId) {
 		return getExplain(sessionId, runtimeRequestId).map(explain -> ExplainMirrorSummary.builder()
 			.datasource(explain.getDatasource())
@@ -165,7 +182,7 @@ public class AnswerTraceExplainStore {
 		}
 	}
 
-	private void withAssembly(GraphRequest request, java.util.function.Consumer<ExplainAssembly> consumer) {
+	private void withAssembly(AgentRequest request, java.util.function.Consumer<ExplainAssembly> consumer) {
 		if (request == null || !StringUtils.hasText(request.getThreadId())
 				|| !StringUtils.hasText(request.getRuntimeRequestId())) {
 			return;
@@ -184,7 +201,7 @@ public class AnswerTraceExplainStore {
 		return explainsByRequest.computeIfAbsent(runtimeRequestId, ignored -> new ExplainAssembly());
 	}
 
-	private void applyRequestContext(ExplainAssembly assembly, GraphRequest request) {
+	private void applyRequestContext(ExplainAssembly assembly, AgentRequest request) {
 		if (assembly == null || request == null) {
 			return;
 		}
@@ -268,6 +285,35 @@ public class AnswerTraceExplainStore {
 		if (StringUtils.hasText(result.getSql())) {
 			assembly.sql = result.getSql();
 		}
+		if (result.getUsedTables() != null && !result.getUsedTables().isEmpty()) {
+			assembly.usedTables.clear();
+			assembly.usedTables.addAll(result.getUsedTables().stream().filter(StringUtils::hasText).map(String::trim).toList());
+		}
+		if (result.getUsedColumns() != null && !result.getUsedColumns().isEmpty()) {
+			assembly.usedColumns.clear();
+			assembly.usedColumns
+				.addAll(result.getUsedColumns().stream().filter(StringUtils::hasText).map(String::trim).toList());
+		}
+		if (result.getRelationEvidence() != null && !result.getRelationEvidence().isEmpty()) {
+			assembly.relationEvidence.clear();
+			assembly.relationEvidence.addAll(result.getRelationEvidence());
+		}
+		if (StringUtils.hasText(result.getResultScope())) {
+			assembly.resultScope = result.getResultScope();
+		}
+		if (StringUtils.hasText(result.getDecisionReason())) {
+			assembly.decisionReason = result.getDecisionReason();
+		}
+		if (result.getToolDecisionReasons() != null && !result.getToolDecisionReasons().isEmpty()) {
+			assembly.toolDecisionReasons.clear();
+			assembly.toolDecisionReasons
+				.addAll(result.getToolDecisionReasons().stream().filter(StringUtils::hasText).map(String::trim).toList());
+		}
+		if (result.getResultScopeDetails() != null && !result.getResultScopeDetails().isEmpty()) {
+			assembly.resultScopeDetails.clear();
+			assembly.resultScopeDetails
+				.addAll(result.getResultScopeDetails().stream().filter(StringUtils::hasText).map(String::trim).toList());
+		}
 		assembly.toolSteps.add(ToolStepView.builder()
 			.toolName("datasource.explorer")
 			.title(result.getAction())
@@ -285,6 +331,9 @@ public class AnswerTraceExplainStore {
 		assembly.clarify.put("missingDimensions", assessment.missingDimensions());
 		assembly.clarify.put("followUpQuestions", assessment.followUpQuestions());
 		assembly.clarify.put("suggestedAssumptions", assessment.suggestedAssumptions());
+		assembly.clarify.put("summary", assessment.summary());
+		assembly.clarify.put("userMessage", assessment.userMessage());
+		assembly.clarify.put("shouldBlockExecution", assessment.shouldBlockExecution());
 		if (StringUtils.hasText(assessment.feedbackContent())) {
 			assembly.clarify.put("humanFeedbackContent", assessment.feedbackContent());
 		}
@@ -335,6 +384,20 @@ public class AnswerTraceExplainStore {
 
 		private String sql;
 
+		private String decisionReason;
+
+		private String resultScope;
+
+		private final List<String> usedTables = new ArrayList<>();
+
+		private final List<String> usedColumns = new ArrayList<>();
+
+		private final List<Map<String, Object>> relationEvidence = new ArrayList<>();
+
+		private final List<String> toolDecisionReasons = new ArrayList<>();
+
+		private final List<String> resultScopeDetails = new ArrayList<>();
+
 		private final List<SemanticHitView> semanticHits = new ArrayList<>();
 
 		private final List<KnowledgeHitView> knowledgeHits = new ArrayList<>();
@@ -356,6 +419,13 @@ public class AnswerTraceExplainStore {
 				.answer(answer)
 				.datasource(datasource)
 				.sql(sql)
+				.decisionReason(decisionReason)
+				.resultScope(resultScope)
+				.usedTables(List.copyOf(usedTables))
+				.usedColumns(List.copyOf(usedColumns))
+				.relationEvidence(List.copyOf(relationEvidence))
+				.toolDecisionReasons(List.copyOf(toolDecisionReasons))
+				.resultScopeDetails(List.copyOf(resultScopeDetails))
 				.semanticHits(List.copyOf(semanticHits))
 				.knowledgeHits(List.copyOf(knowledgeHits))
 				.toolSteps(List.copyOf(toolSteps))
@@ -385,6 +455,25 @@ public class AnswerTraceExplainStore {
 		private String datasource;
 
 		private String sql;
+
+		private String decisionReason;
+
+		private String resultScope;
+
+		@Builder.Default
+		private List<String> usedTables = List.of();
+
+		@Builder.Default
+		private List<String> usedColumns = List.of();
+
+		@Builder.Default
+		private List<Map<String, Object>> relationEvidence = List.of();
+
+		@Builder.Default
+		private List<String> toolDecisionReasons = List.of();
+
+		@Builder.Default
+		private List<String> resultScopeDetails = List.of();
 
 		@Builder.Default
 		private List<SemanticHitView> semanticHits = List.of();

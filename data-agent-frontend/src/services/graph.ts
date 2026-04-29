@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export interface GraphRequest {
+export interface AgentRequest {
   agentId: string;
   threadId?: string;
   runtimeRequestId?: string;
@@ -35,7 +35,7 @@ export interface ClarifyMetadata {
   summary?: string;
 }
 
-export interface GraphNodeResponse {
+export interface AgentResponse {
   agentId: string;
   threadId: string;
   nodeName: string;
@@ -68,8 +68,8 @@ class GraphService {
    * @returns 关闭连接的函数
    */
   async streamSearch(
-    request: GraphRequest,
-    onMessage: (response: GraphNodeResponse) => Promise<void>,
+    request: AgentRequest,
+    onMessage: (response: AgentResponse) => Promise<void>,
     onError?: (error: Error) => Promise<void>,
     onComplete?: () => Promise<void>,
   ): Promise<() => void> {
@@ -111,7 +111,7 @@ class GraphService {
         return;
       }
       try {
-        const nodeResponse: GraphNodeResponse = JSON.parse(event.data);
+        const nodeResponse: AgentResponse = JSON.parse(event.data);
         console.log(
           `Node: ${nodeResponse.nodeName}, message: ${nodeResponse.text}, type: ${nodeResponse.textType}`,
         );

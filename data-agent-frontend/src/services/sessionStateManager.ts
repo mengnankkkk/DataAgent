@@ -15,7 +15,7 @@
  */
 
 import { ref, Ref } from 'vue';
-import { GraphNodeResponse, GraphRequest } from '@/services/graph.ts';
+import { AgentResponse, AgentRequest } from '@/services/graph.ts';
 import { AnswerTraceExplain } from '@/services/chat.ts';
 
 export interface PendingClarifyState {
@@ -29,10 +29,10 @@ export interface PendingClarifyState {
 
 export interface SessionRuntimeState {
   isStreaming: boolean;
-  nodeBlocks: GraphNodeResponse[][];
+  nodeBlocks: AgentResponse[][];
   persistedBlockCount: number;
   closeStream: (() => void) | null;
-  lastRequest: GraphRequest | null;
+  lastRequest: AgentRequest | null;
   pendingClarify: PendingClarifyState | null;
   htmlReportContent: string;
   htmlReportSize: number;
@@ -43,9 +43,9 @@ export interface SessionRuntimeState {
 
 // 可持久化的状态字段（不包括函数和临时状态）
 interface PersistableState {
-  nodeBlocks: GraphNodeResponse[][];
+  nodeBlocks: AgentResponse[][];
   persistedBlockCount: number;
-  lastRequest: GraphRequest | null;
+  lastRequest: AgentRequest | null;
   pendingClarify: PendingClarifyState | null;
   htmlReportContent: string;
   htmlReportSize: number;
@@ -160,7 +160,7 @@ export function useSessionStateManager() {
     sessionId: string,
     viewState: {
       isStreaming: Ref<boolean>;
-      nodeBlocks: Ref<GraphNodeResponse[][]>;
+      nodeBlocks: Ref<AgentResponse[][]>;
       answerExplain?: Ref<AnswerTraceExplain | null>;
       answerExplainVisible?: Ref<boolean>;
       pendingClarify?: Ref<PendingClarifyState | null>;
@@ -187,7 +187,7 @@ export function useSessionStateManager() {
     sessionId: string,
     viewState: {
       isStreaming: Ref<boolean>;
-      nodeBlocks: Ref<GraphNodeResponse[][]>;
+      nodeBlocks: Ref<AgentResponse[][]>;
       answerExplain?: Ref<AnswerTraceExplain | null>;
       answerExplainVisible?: Ref<boolean>;
       pendingClarify?: Ref<PendingClarifyState | null>;

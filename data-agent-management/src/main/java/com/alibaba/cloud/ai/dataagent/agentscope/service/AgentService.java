@@ -15,8 +15,8 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.service;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
-import com.alibaba.cloud.ai.dataagent.agentscope.vo.GraphNodeResponse;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.vo.AgentResponse;
 import org.springframework.http.codec.ServerSentEvent;
 import reactor.core.publisher.Sinks;
 
@@ -24,7 +24,7 @@ public interface AgentService {
 
 	String nl2sql(String naturalQuery, String agentId);
 
-	void graphStreamProcess(Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink, GraphRequest graphRequest);
+	void graphStreamProcess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest agentRequest);
 
 	void stopStreamProcessing(String threadId, String runtimeRequestId);
 

@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import io.agentscope.core.hook.Hook;
 import io.agentscope.core.hook.HookEvent;
 import io.agentscope.core.hook.PreReasoningEvent;
@@ -42,7 +42,7 @@ public class HumanFeedbackHook implements Hook {
 		this.feedbackDirective = feedbackDirective;
 	}
 
-	public static HumanFeedbackHook from(GraphRequest request) {
+	public static HumanFeedbackHook from(AgentRequest request) {
 		if (request.isNl2sqlOnly()) {
 			return null;
 		}
@@ -74,7 +74,7 @@ public class HumanFeedbackHook implements Hook {
 		return Mono.just(event);
 	}
 
-	private static String buildDirective(GraphRequest request) {
+	private static String buildDirective(AgentRequest request) {
 		StringBuilder builder = new StringBuilder("Human review directive:");
 		if (request.isRejectedPlan()) {
 			builder.append("\n- The previous plan was rejected. Re-plan before continuing.");

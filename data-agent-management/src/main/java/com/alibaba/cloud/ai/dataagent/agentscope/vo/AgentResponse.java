@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class GraphNodeResponse {
+public class AgentResponse {
 
 	private String agentId;
 
@@ -46,8 +46,8 @@ public class GraphNodeResponse {
 	@Builder.Default
 	private boolean complete = false;
 
-	public static GraphNodeResponse error(String agentId, String threadId, String text) {
-		return GraphNodeResponse.builder()
+	public static AgentResponse error(String agentId, String threadId, String text) {
+		return AgentResponse.builder()
 			.agentId(agentId)
 			.threadId(threadId)
 			.text(text)
@@ -56,8 +56,8 @@ public class GraphNodeResponse {
 			.build();
 	}
 
-	public static GraphNodeResponse complete(String agentId, String threadId) {
-		return GraphNodeResponse.builder()
+	public static AgentResponse complete(String agentId, String threadId) {
+		return AgentResponse.builder()
 			.agentId(agentId)
 			.threadId(threadId)
 			.complete(true)

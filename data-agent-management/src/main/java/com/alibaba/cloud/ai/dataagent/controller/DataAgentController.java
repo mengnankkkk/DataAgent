@@ -15,9 +15,9 @@
  */
 package com.alibaba.cloud.ai.dataagent.controller;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.service.AgentService;
-import com.alibaba.cloud.ai.dataagent.agentscope.vo.GraphNodeResponse;
+import com.alibaba.cloud.ai.dataagent.agentscope.vo.AgentResponse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -44,20 +44,20 @@ public class DataAgentController {
 	private final AgentService agentService;
 
 	@GetMapping(value = "/stream/search", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-	public Flux<ServerSentEvent<GraphNodeResponse>> streamSearch(@RequestParam("agentId") String agentId,
-			@RequestParam(value = "threadId", required = false) String threadId,
-			@RequestParam(value = "runtimeRequestId", required = false) String runtimeRequestId,
-			@RequestParam("query") String query,
-			@RequestParam(value = "humanFeedback", required = false) boolean humanFeedback,
-			@RequestParam(value = "humanFeedbackContent", required = false) String humanFeedbackContent,
-			@RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan,
-			@RequestParam(value = "nl2sqlOnly", required = false) boolean nl2sqlOnly, ServerHttpResponse response) {
+	public Flux<ServerSentEvent<AgentResponse>> streamSearch(@RequestParam("agentId") String agentId,
+                                                             @RequestParam(value = "threadId", required = false) String threadId,
+                                                             @RequestParam(value = "runtimeRequestId", required = false) String runtimeRequestId,
+                                                             @RequestParam("query") String query,
+                                                             @RequestParam(value = "humanFeedback", required = false) boolean humanFeedback,
+                                                             @RequestParam(value = "humanFeedbackContent", required = false) String humanFeedbackContent,
+                                                             @RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan,
+                                                             @RequestParam(value = "nl2sqlOnly", required = false) boolean nl2sqlOnly, ServerHttpResponse response) {
 		response.getHeaders().add("Cache-Control", "no-cache");
 		response.getHeaders().add("Connection", "keep-alive");
 		response.getHeaders().add("Access-Control-Allow-Origin", "*");
 
-		Sinks.Many<ServerSentEvent<GraphNodeResponse>> sink = Sinks.many().unicast().onBackpressureBuffer();
-		GraphRequest request = GraphRequest.builder()
+		Sinks.Many<ServerSentEvent<AgentResponse>> sink = Sinks.many().unicast().onBackpressureBuffer();
+		AgentRequest request = AgentRequest.builder()
 			.agentId(agentId)
 			.threadId(threadId)
 			.runtimeRequestId(runtimeRequestId)

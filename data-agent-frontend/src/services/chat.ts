@@ -76,14 +76,17 @@ export interface AnswerTraceExplain {
   answer?: string;
   datasource?: string;
   sql?: string;
-  sqlExplanation?: string;
+  decisionReason?: string;
+  resultScope?: string;
+  usedTables: string[];
+  usedColumns: string[];
+  relationEvidence: Record<string, any>[];
+  toolDecisionReasons: string[];
+  resultScopeDetails: string[];
   semanticHits: AnswerTraceSemanticHit[];
   knowledgeHits: AnswerTraceKnowledgeHit[];
   toolSteps: AnswerTraceToolStep[];
-  usedTables: string[];
-  usedColumns: string[];
-  permissions: Record<string, any>;
-  stats: Record<string, any>;
+  clarify?: Record<string, any>;
   warnings: string[];
   updatedAt: number;
 }
@@ -187,6 +190,15 @@ class ChatService {
     const response = await axios.get<SessionTrace>(`${API_BASE_URL}/sessions/${sessionId}/trace`, {
       params: { agentId: resolvedAgentId },
     });
+    return response.data;
+  }
+
+  async getLatestAnswerExplain(sessionId: string, agentId: number): Promise<AnswerTraceExplain> {
+    const resolvedAgentId = resolveAgentId(agentId);
+    const response = await axios.get<AnswerTraceExplain>(
+      `${API_BASE_URL}/sessions/${sessionId}/answers/latest/explain`,
+      { params: { agentId: resolvedAgentId } },
+    );
     return response.data;
   }
 

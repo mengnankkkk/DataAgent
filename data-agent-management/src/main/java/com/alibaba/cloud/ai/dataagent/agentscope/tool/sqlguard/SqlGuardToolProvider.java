@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.tool.sqlguard;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.AgentScopedToolProvider;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
@@ -175,11 +175,11 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 			if (request == null || StringUtils.hasText(request.getHumanFeedbackContent())) {
 				return;
 			}
-			GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-			if (graphRequest == null) {
+			AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
+			if (agentRequest == null) {
 				return;
 			}
-			request.setHumanFeedbackContent(graphRequest.getHumanFeedbackContent());
+			request.setHumanFeedbackContent(agentRequest.getHumanFeedbackContent());
 		}
 
 		private String objectToJson(Object value) {

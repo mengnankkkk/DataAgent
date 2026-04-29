@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.tool.datasource;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.AgentScopedToolProvider;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
@@ -173,8 +173,8 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 			try {
 				DatasourceExplorerRequest request = objectMapper.readValue(toolInput, DatasourceExplorerRequest.class);
 				validateRequest(request);
-				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(datasourceExplorerService.execute(agentId, request, graphRequest));
+				AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
+				return objectMapper.writeValueAsString(datasourceExplorerService.execute(agentId, request, agentRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException(

@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentscope.core.message.TextBlock;
@@ -88,9 +88,9 @@ public class SpringToolCallbackAgentAdapter implements AgentTool {
 		if (toolCallParam.getContext() != null) {
 			contextMap.put("agentScopeContext", toolCallParam.getContext());
 			ToolExecutionContext toolExecutionContext = toolCallParam.getContext();
-			GraphRequest graphRequest = toolExecutionContext.get("graphRequest", GraphRequest.class);
-			if (graphRequest != null) {
-				contextMap.put("graphRequest", graphRequest);
+			AgentRequest agentRequest = toolExecutionContext.get("agentRequest", AgentRequest.class);
+			if (agentRequest != null) {
+				contextMap.put("graphRequest", agentRequest);
 			}
 			AgentRuntimeRequestMetadata requestMetadata = toolExecutionContext.get(AgentRuntimeRequestMetadata.class);
 			if (requestMetadata != null) {

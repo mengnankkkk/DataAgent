@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class GraphRequest {
+public class AgentRequest {
 
 	private String agentId;
 

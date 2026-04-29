@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.template.AgentRuntimeExtensions;
 import io.agentscope.core.hook.Hook;
 import io.agentscope.core.memory.Memory;
@@ -42,8 +42,8 @@ public class AgentRuntimeExtensionFactory {
 
 	private final AgentScopeSkillBoxFactory skillBoxFactory;
 
-	public AgentRuntimeExtensions create(GraphRequest request, @Nullable AgentRuntimeEventPublisher eventPublisher,
-			Map<String, ToolCallback> toolCallbacks) {
+	public AgentRuntimeExtensions create(AgentRequest request, @Nullable AgentRuntimeEventPublisher eventPublisher,
+                                         Map<String, ToolCallback> toolCallbacks) {
 		Toolkit toolkit = toolkitFactory.buildToolkit(toolCallbacks);
 		SkillBox skillBox = skillBoxFactory.create(request.getAgentId(), toolkit);
 		Memory memory = memoryFactory.create(request.getThreadId());

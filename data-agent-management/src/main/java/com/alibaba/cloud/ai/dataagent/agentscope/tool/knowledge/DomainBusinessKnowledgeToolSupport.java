@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.tool.knowledge;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolErrorCode;
@@ -130,8 +130,8 @@ public class DomainBusinessKnowledgeToolSupport {
 
 				DomainKnowledgeSearchRequest request = new DomainKnowledgeSearchRequest(query,
 						knowledgeTypes.isEmpty() ? null : List.copyOf(knowledgeTypes), topK, similarityThreshold);
-				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, graphRequest));
+				AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
+				return objectMapper.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, agentRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException(objectToJson(

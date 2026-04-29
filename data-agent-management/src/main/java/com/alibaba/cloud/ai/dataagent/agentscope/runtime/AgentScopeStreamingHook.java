@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.runtime;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.vo.GraphNodeResponse;
+import com.alibaba.cloud.ai.dataagent.agentscope.vo.AgentResponse;
 import com.alibaba.cloud.ai.dataagent.enums.TextType;
 import io.agentscope.core.hook.ActingChunkEvent;
 import io.agentscope.core.hook.Hook;
@@ -76,7 +76,7 @@ public class AgentScopeStreamingHook implements Hook {
 		if (text == null || text.isBlank()) {
 			return;
 		}
-		eventPublisher.publish(GraphNodeResponse.builder()
+		eventPublisher.publish(AgentResponse.builder()
 			.agentId(agentId)
 			.threadId(threadId)
 			.nodeName(nodeName)

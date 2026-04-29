@@ -15,7 +15,7 @@
  */
 package com.alibaba.cloud.ai.dataagent.agentscope.tool.semantic;
 
-import com.alibaba.cloud.ai.dataagent.agentscope.dto.GraphRequest;
+import com.alibaba.cloud.ai.dataagent.agentscope.dto.AgentRequest;
 import com.alibaba.cloud.ai.dataagent.agentscope.runtime.ToolContextRequestResolver;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolError;
 import com.alibaba.cloud.ai.dataagent.agentscope.tool.ToolErrorCode;
@@ -99,8 +99,8 @@ public class SemanticModelToolSupport {
 						? objectMapper.readValue(toolInput, SemanticModelSearchRequest.class)
 						: new SemanticModelSearchRequest();
 				validateRequest(request);
-				GraphRequest graphRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(semanticModelSearchService.search(agentId, request, graphRequest));
+				AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
+				return objectMapper.writeValueAsString(semanticModelSearchService.search(agentId, request, agentRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException(
