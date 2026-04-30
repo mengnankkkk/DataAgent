@@ -287,7 +287,8 @@ public class AnswerTraceExplainStore {
 		}
 		if (result.getUsedTables() != null && !result.getUsedTables().isEmpty()) {
 			assembly.usedTables.clear();
-			assembly.usedTables.addAll(result.getUsedTables().stream().filter(StringUtils::hasText).map(String::trim).toList());
+			assembly.usedTables
+				.addAll(result.getUsedTables().stream().filter(StringUtils::hasText).map(String::trim).toList());
 		}
 		if (result.getUsedColumns() != null && !result.getUsedColumns().isEmpty()) {
 			assembly.usedColumns.clear();
@@ -306,13 +307,13 @@ public class AnswerTraceExplainStore {
 		}
 		if (result.getToolDecisionReasons() != null && !result.getToolDecisionReasons().isEmpty()) {
 			assembly.toolDecisionReasons.clear();
-			assembly.toolDecisionReasons
-				.addAll(result.getToolDecisionReasons().stream().filter(StringUtils::hasText).map(String::trim).toList());
+			assembly.toolDecisionReasons.addAll(
+					result.getToolDecisionReasons().stream().filter(StringUtils::hasText).map(String::trim).toList());
 		}
 		if (result.getResultScopeDetails() != null && !result.getResultScopeDetails().isEmpty()) {
 			assembly.resultScopeDetails.clear();
-			assembly.resultScopeDetails
-				.addAll(result.getResultScopeDetails().stream().filter(StringUtils::hasText).map(String::trim).toList());
+			assembly.resultScopeDetails.addAll(
+					result.getResultScopeDetails().stream().filter(StringUtils::hasText).map(String::trim).toList());
 		}
 		assembly.toolSteps.add(ToolStepView.builder()
 			.toolName("datasource.explorer")

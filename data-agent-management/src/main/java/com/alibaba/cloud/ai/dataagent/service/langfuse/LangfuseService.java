@@ -78,7 +78,10 @@ public class LangfuseService {
 		}
 
 		try {
-			Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.CLIENT).setParent(Context.current()).startSpan();
+			Span span = tracer.spanBuilder(spanName)
+				.setSpanKind(SpanKind.CLIENT)
+				.setParent(Context.current())
+				.startSpan();
 
 			String inputValue = String.format(
 					"{\\\"query\\\":\\\"%s\\\",\\\"agentId\\\":\\\"%s\\\",\\\"threadId\\\":\\\"%s\\\",\\\"humanFeedback\\\":%s}",

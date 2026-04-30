@@ -156,7 +156,7 @@ public class AiAgentRuntimeServiceImpl implements AgentService {
 	}
 
 	private void emitSuccess(Sinks.Many<ServerSentEvent<AgentResponse>> sink, AgentRequest request, String result,
-                             StreamTextTracker streamTextTracker) {
+			StreamTextTracker streamTextTracker) {
 		String threadId = request.getThreadId();
 		String runtimeRequestId = request.getRuntimeRequestId();
 		if (!runtimeRegistry.isActive(threadId, runtimeRequestId)) {

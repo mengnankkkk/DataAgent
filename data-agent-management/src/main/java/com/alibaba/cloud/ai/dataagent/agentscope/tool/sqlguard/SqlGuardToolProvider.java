@@ -148,9 +148,8 @@ public class SqlGuardToolProvider implements AgentScopedToolProvider {
 				return objectMapper.writeValueAsString(result);
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException(
-						objectToJson(ToolError.of(ToolErrorCode.EXECUTION_FAILED, "sql_guard.check 执行失败：" + ex.getMessage())),
-						ex);
+				throw new IllegalStateException(objectToJson(
+						ToolError.of(ToolErrorCode.EXECUTION_FAILED, "sql_guard.check 执行失败：" + ex.getMessage())), ex);
 			}
 		}
 

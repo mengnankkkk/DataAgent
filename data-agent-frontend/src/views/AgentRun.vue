@@ -776,14 +776,18 @@
             </div>
             <div v-if="answerExplain.usedColumns.length > 0" class="answer-explain-kv-row">
               <span class="answer-explain-kv-key">使用字段</span>
-              <span class="answer-explain-kv-value">{{ answerExplain.usedColumns.join('、') }}</span>
+              <span class="answer-explain-kv-value">
+                {{ answerExplain.usedColumns.join('、') }}
+              </span>
             </div>
             <div v-if="answerExplain.decisionReason" class="answer-explain-kv-row">
               <span class="answer-explain-kv-key">工具决策来源</span>
               <span class="answer-explain-kv-value">{{ answerExplain.decisionReason }}</span>
             </div>
             <div
-              v-if="answerExplain.toolDecisionReasons && answerExplain.toolDecisionReasons.length > 0"
+              v-if="
+                answerExplain.toolDecisionReasons && answerExplain.toolDecisionReasons.length > 0
+              "
               class="answer-explain-kv-row"
             >
               <span class="answer-explain-kv-key">工具决策细节</span>
@@ -820,11 +824,15 @@
             </div>
             <div v-if="answerExplain.semanticHits.length > 0" class="answer-explain-kv-row">
               <span class="answer-explain-kv-key">语义模型命中</span>
-              <span class="answer-explain-kv-value">{{ answerExplain.semanticHits.length }} 条</span>
+              <span class="answer-explain-kv-value">
+                {{ answerExplain.semanticHits.length }} 条
+              </span>
             </div>
             <div v-if="answerExplain.knowledgeHits.length > 0" class="answer-explain-kv-row">
               <span class="answer-explain-kv-key">RAG / 知识命中</span>
-              <span class="answer-explain-kv-value">{{ answerExplain.knowledgeHits.length }} 条</span>
+              <span class="answer-explain-kv-value">
+                {{ answerExplain.knowledgeHits.length }} 条
+              </span>
             </div>
           </div>
         </section>
@@ -844,7 +852,8 @@
               class="answer-explain-card"
             >
               <div class="answer-explain-card-title">
-                {{ relation.sourceTable }}.{{ relation.sourceColumn }} → {{ relation.targetTable }}.{{ relation.targetColumn }}
+                {{ relation.sourceTable }}.{{ relation.sourceColumn }} →
+                {{ relation.targetTable }}.{{ relation.targetColumn }}
               </div>
               <div class="answer-explain-card-meta">
                 <span>{{ relation.sourceType || '-' }}</span>
@@ -1954,7 +1963,9 @@
         return null;
       });
 
-      const latestExplainRuntimeRequestId = computed(() => sessionTrace.value?.runtimeRequestId ?? null);
+      const latestExplainRuntimeRequestId = computed(
+        () => sessionTrace.value?.runtimeRequestId ?? null,
+      );
 
       const loadLatestAnswerExplain = async (options?: { visible?: boolean }) => {
         if (!currentSession.value) {
@@ -2022,6 +2033,8 @@
         }
       };
 
+      void loadAnswerExplainByRuntimeRequestId;
+
       const openLatestAnswerExplain = async () => {
         if (!currentSession.value) {
           ElMessage.warning('当前会话还没有可查看的数据来源');
@@ -2052,7 +2065,7 @@
         }
         return value
           .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-          .map((item) => item.trim());
+          .map(item => item.trim());
       };
 
       const summarizeExplainExecution = (explain: AnswerTraceExplain | null) => {
@@ -2086,7 +2099,10 @@
         if (hasSemanticEvidence) {
           return '本轮回答没有直接查库，但命中了语义模型，用来帮助系统理解你的问题和业务字段。';
         }
-        if (explain.toolSteps.length > 0 || (explain.clarify && Object.keys(explain.clarify).length > 0)) {
+        if (
+          explain.toolSteps.length > 0 ||
+          (explain.clarify && Object.keys(explain.clarify).length > 0)
+        ) {
           return '本轮回答没有形成可展示的查库明细，但系统执行过澄清或其他工具步骤，详细过程可在下方查看。';
         }
         return '本轮回答没有访问数据库、知识库或其他可回放工具，当前结果主要来自模型直接生成。';

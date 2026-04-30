@@ -44,9 +44,9 @@ public class DomainBusinessKnowledgeToolSupport {
 			      "type": "string",
 			      "description": "必填。需要检索的业务问题、指标名、术语、SOP 主题或案例主题。"
 			    },
-		    "knowledgeTypes": {
-		      "type": "array",
-		      "description": "可选。限定知识范围。支持 businessKnowledge、agentKnowledge、document、qa、faq、all。",
+			   "knowledgeTypes": {
+			     "type": "array",
+			     "description": "可选。限定知识范围。支持 businessKnowledge、agentKnowledge、document、qa、faq、all。",
 			      "items": {
 			        "type": "string"
 			      }
@@ -125,18 +125,18 @@ public class DomainBusinessKnowledgeToolSupport {
 				Integer topK = jsonNode.has("topK") && jsonNode.get("topK").canConvertToInt()
 						? jsonNode.get("topK").asInt() : null;
 				Double similarityThreshold = jsonNode.has("similarityThreshold")
-						&& jsonNode.get("similarityThreshold").isNumber() ? jsonNode.get("similarityThreshold").asDouble()
-								: null;
+						&& jsonNode.get("similarityThreshold").isNumber()
+								? jsonNode.get("similarityThreshold").asDouble() : null;
 
 				DomainKnowledgeSearchRequest request = new DomainKnowledgeSearchRequest(query,
 						knowledgeTypes.isEmpty() ? null : List.copyOf(knowledgeTypes), topK, similarityThreshold);
 				AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, agentRequest));
+				return objectMapper
+					.writeValueAsString(domainKnowledgeSearchService.search(agentId, request, agentRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException(objectToJson(
-						ToolError.of(ToolErrorCode.EXECUTION_FAILED, "domain_business_knowledge.search 执行失败：" + ex.getMessage())),
-						ex);
+				throw new IllegalStateException(objectToJson(ToolError.of(ToolErrorCode.EXECUTION_FAILED,
+						"domain_business_knowledge.search 执行失败：" + ex.getMessage())), ex);
 			}
 		}
 

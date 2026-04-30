@@ -100,11 +100,12 @@ public class SemanticModelToolSupport {
 						: new SemanticModelSearchRequest();
 				validateRequest(request);
 				AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(semanticModelSearchService.search(agentId, request, agentRequest));
+				return objectMapper
+					.writeValueAsString(semanticModelSearchService.search(agentId, request, agentRequest));
 			}
 			catch (Exception ex) {
-				throw new IllegalStateException(
-						objectToJson(ToolError.of(ToolErrorCode.EXECUTION_FAILED, "semantic_model.search 执行失败：" + ex.getMessage())),
+				throw new IllegalStateException(objectToJson(
+						ToolError.of(ToolErrorCode.EXECUTION_FAILED, "semantic_model.search 执行失败：" + ex.getMessage())),
 						ex);
 			}
 		}

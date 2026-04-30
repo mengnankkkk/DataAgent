@@ -204,8 +204,7 @@ public class SqlVerifyExplainService {
 		List<ColumnInfoBO> availableColumns = loadTableColumns(context, actualTableName);
 		List<ColumnInfoBO> visibleColumns = applyVisibleColumnRestrictions(context, actualTableName, availableColumns);
 		if (visibleColumns.isEmpty()) {
-			throw new IllegalArgumentException(
-					"表 '%s' 在当前 Agent 下没有可见字段".formatted(actualTableName));
+			throw new IllegalArgumentException("表 '%s' 在当前 Agent 下没有可见字段".formatted(actualTableName));
 		}
 		List<ColumnInfoBO> columnsToInspect = resolveColumnsToInspect(request, actualTableName, visibleColumns);
 		int sampleLimit = normalizeProfileLimit(request == null ? null : request.getLimit());
@@ -214,8 +213,7 @@ public class SqlVerifyExplainService {
 		List<Map<String, Object>> columnProfiles = columnsToInspect.stream()
 			.map(column -> buildColumnProfile(context, actualTableName, column, totalRows, sampleLimit))
 			.toList();
-		String summary = "仅基于可见字段对表 '%s' 的 %d 个字段完成 profile 分析。".formatted(columnProfiles.size(),
-				actualTableName);
+		String summary = "仅基于可见字段对表 '%s' 的 %d 个字段完成 profile 分析。".formatted(columnProfiles.size(), actualTableName);
 		return SqlGuardCheckResult.builder()
 			.decision("inspect_columns")
 			.tableName(actualTableName)
@@ -223,8 +221,7 @@ public class SqlVerifyExplainService {
 			.totalRows(totalRows)
 			.columnProfiles(columnProfiles)
 			.fixSuggestions(
-					List.of("可优先把高频值集中的分类字段用作过滤条件或 GROUP BY 候选字段。",
-							"可优先把具备 min/max 范围的数值或时间字段用作指标、趋势或时间窗口候选字段。"))
+					List.of("可优先把高频值集中的分类字段用作过滤条件或 GROUP BY 候选字段。", "可优先把具备 min/max 范围的数值或时间字段用作指标、趋势或时间窗口候选字段。"))
 			.build();
 	}
 
@@ -248,8 +245,7 @@ public class SqlVerifyExplainService {
 					: explicitSelectedTables;
 		}
 		catch (Exception ex) {
-			throw new IllegalStateException("加载数据源 %s 的可见表失败：%s"
-				.formatted(datasource.getId(), ex.getMessage()), ex);
+			throw new IllegalStateException("加载数据源 %s 的可见表失败：%s".formatted(datasource.getId(), ex.getMessage()), ex);
 		}
 		Map<String, List<String>> visibleTablesByName = indexTables(visibleTables, false);
 		Map<String, List<String>> visibleTablesByLeafName = indexTables(visibleTables, true);
@@ -276,8 +272,7 @@ public class SqlVerifyExplainService {
 				.orElse(List.of());
 		}
 		catch (Exception ex) {
-			throw new IllegalStateException(
-					"加载表 '%s' 的字段失败：%s".formatted(tableName, ex.getMessage()), ex);
+			throw new IllegalStateException("加载表 '%s' 的字段失败：%s".formatted(tableName, ex.getMessage()), ex);
 		}
 	}
 
@@ -309,8 +304,8 @@ public class SqlVerifyExplainService {
 		for (String requestedColumn : requestedColumns) {
 			ColumnInfoBO column = columnsByName.get(normalizeColumnName(requestedColumn));
 			if (column == null) {
-				throw new IllegalArgumentException("字段 '%s' 在表 '%s' 中对当前 Agent 不可见"
-					.formatted(requestedColumn, tableName));
+				throw new IllegalArgumentException(
+						"字段 '%s' 在表 '%s' 中对当前 Agent 不可见".formatted(requestedColumn, tableName));
 			}
 			resolvedColumns.add(column);
 		}
@@ -542,9 +537,8 @@ public class SqlVerifyExplainService {
 
 	private String resolveVisibleTableName(ProfileContext context, String tableName) {
 		return findVisibleTableName(context.visibleTablesByName(), context.visibleTablesByLeafName(), tableName, false)
-			.orElseThrow(
-					() -> new IllegalArgumentException("表 '%s' 对当前 Agent 不可见。当前可见表：%s"
-						.formatted(tableName, String.join(", ", context.visibleTables()))));
+			.orElseThrow(() -> new IllegalArgumentException(
+					"表 '%s' 对当前 Agent 不可见。当前可见表：%s".formatted(tableName, String.join(", ", context.visibleTables()))));
 	}
 
 	private Optional<String> findVisibleTableName(Map<String, List<String>> visibleTablesByName,
@@ -555,8 +549,8 @@ public class SqlVerifyExplainService {
 			return Optional.of(exactMatches.get(0));
 		}
 		if (exactMatches.size() > 1) {
-			throw new IllegalArgumentException("表 '%s' 映射到了多张当前可见表：%s".formatted(tableName,
-					String.join(", ", exactMatches)));
+			throw new IllegalArgumentException(
+					"表 '%s' 映射到了多张当前可见表：%s".formatted(tableName, String.join(", ", exactMatches)));
 		}
 		if (isQualifiedIdentifier(tableName) && !allowQualifiedFallback) {
 			return Optional.empty();
@@ -566,8 +560,8 @@ public class SqlVerifyExplainService {
 			return Optional.of(leafMatches.get(0));
 		}
 		if (leafMatches.size() > 1) {
-			throw new IllegalArgumentException("表 '%s' 在当前可见表范围内存在歧义：%s".formatted(tableName,
-					String.join(", ", leafMatches)));
+			throw new IllegalArgumentException(
+					"表 '%s' 在当前可见表范围内存在歧义：%s".formatted(tableName, String.join(", ", leafMatches)));
 		}
 		return Optional.empty();
 	}

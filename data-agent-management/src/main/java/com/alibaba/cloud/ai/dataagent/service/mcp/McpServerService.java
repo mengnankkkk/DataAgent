@@ -29,6 +29,7 @@ import java.util.List;
 public class McpServerService {
 
 	private final AgentMapper agentMapper;
+
 	public record AgentListRequest(String status, String keyword) {
 	}
 

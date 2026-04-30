@@ -53,16 +53,14 @@ public class SemanticModelSearchService {
 	public SemanticModelSearchResult search(String agentId, SemanticModelSearchRequest request,
 			@Nullable AgentRequest agentRequest) {
 		if (!StringUtils.hasText(agentId)) {
-			return emptyResult(request == null ? null : request.getQuery(),
-					"semantic_model.search 需要数值型 agentId 参数。");
+			return emptyResult(request == null ? null : request.getQuery(), "semantic_model.search 需要数值型 agentId 参数。");
 		}
 		Long parsedAgentId;
 		try {
 			parsedAgentId = Long.valueOf(agentId);
 		}
 		catch (NumberFormatException ex) {
-			return emptyResult(request == null ? null : request.getQuery(),
-					"semantic_model.search 需要数值型 agentId 参数。");
+			return emptyResult(request == null ? null : request.getQuery(), "semantic_model.search 需要数值型 agentId 参数。");
 		}
 		return search(parsedAgentId, request, agentRequest);
 	}
@@ -84,16 +82,14 @@ public class SemanticModelSearchService {
 		TableSearchScope scope = resolveTableSearchScope(activeDatasource,
 				request == null ? null : request.getTableNames());
 		if (scope.isScoped() && CollectionUtils.isEmpty(scope.getTableNames())) {
-			return emptyResult(query,
-					"请求中指定的表超出了当前活动数据源对 semantic_model.search 的可见范围。");
+			return emptyResult(query, "请求中指定的表超出了当前活动数据源对 semantic_model.search 的可见范围。");
 		}
 		List<SemanticModel> candidates = scope.isUnbounded()
 				? semanticModelService.getEnabledByAgentIdAndDatasourceId(agentId, activeDatasource.getDatasourceId())
 				: semanticModelService.getEnabledByAgentIdAndDatasourceIdAndTableNames(agentId,
 						activeDatasource.getDatasourceId(), scope.getTableNames());
 		if (CollectionUtils.isEmpty(candidates)) {
-			return emptyResult(query,
-					"当前 Agent/表范围内没有匹配的已启用语义模型条目；物理表结构请改用数据源探索工具查看。");
+			return emptyResult(query, "当前 Agent/表范围内没有匹配的已启用语义模型条目；物理表结构请改用数据源探索工具查看。");
 		}
 
 		List<ScoredHit> scoredHits = candidates.stream()
@@ -111,20 +107,17 @@ public class SemanticModelSearchService {
 			.toList();
 
 		if (scoredHits.isEmpty()) {
-			return emptyResult(query,
-					"没有匹配到补充语义提示；如果数据源探索工具已能回答物理表结构问题，就不要额外调用 semantic_model.search。");
+			return emptyResult(query, "没有匹配到补充语义提示；如果数据源探索工具已能回答物理表结构问题，就不要额外调用 semantic_model.search。");
 		}
 
 		List<SemanticModelSearchHit> hits = scoredHits.stream().map(this::toHit).toList();
-		String summary = "共匹配到 %d 条补充语义提示。这些结果只用于补充理解表和字段语义，不能替代数据源探索工具的物理结构探索。"
-			.formatted(hits.size());
+		String summary = "共匹配到 %d 条补充语义提示。这些结果只用于补充理解表和字段语义，不能替代数据源探索工具的物理结构探索。".formatted(hits.size());
 		if (agentRequest != null) {
-			answerTraceExplainStore.recordSemanticSearch(agentRequest, query,
-					"共匹配到 %d 条补充语义提示".formatted(hits.size()), hits);
+			answerTraceExplainStore.recordSemanticSearch(agentRequest, query, "共匹配到 %d 条补充语义提示".formatted(hits.size()),
+					hits);
 		}
 		else {
-			answerTraceExplainStore.recordSemanticSearch(query,
-					"共匹配到 %d 条补充语义提示".formatted(hits.size()), hits);
+			answerTraceExplainStore.recordSemanticSearch(query, "共匹配到 %d 条补充语义提示".formatted(hits.size()), hits);
 		}
 		return SemanticModelSearchResult.builder().summary(summary).hits(hits).resolution("matched").build();
 	}

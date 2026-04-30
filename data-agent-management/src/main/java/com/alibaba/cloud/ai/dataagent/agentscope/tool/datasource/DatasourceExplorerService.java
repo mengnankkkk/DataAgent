@@ -678,8 +678,8 @@ public class DatasourceExplorerService {
 			.stream()
 			.filter(relation -> normalizedReferencedTables.contains(normalizeTableName(relation.sourceTable()))
 					&& normalizedReferencedTables.contains(normalizeTableName(relation.targetTable())))
-				.map(this::toRelationEntry)
-				.toList();
+			.map(this::toRelationEntry)
+			.toList();
 	}
 
 	private String buildResultScopeSummary(ResultSetBO resultSet, int limit) {
@@ -710,8 +710,8 @@ public class DatasourceExplorerService {
 				"预览查询会自动附带 limit=%d，避免一次返回过多行。".formatted(limit));
 	}
 
-	private List<String> buildSearchDecisionReasons(List<String> usedTables,
-			List<Map<String, Object>> relationEvidence, int limit) {
+	private List<String> buildSearchDecisionReasons(List<String> usedTables, List<Map<String, Object>> relationEvidence,
+			int limit) {
 		List<String> reasons = new ArrayList<>();
 		reasons.add("本轮选择执行 SQL，是因为回答需要结构化结果来支撑结论。");
 		if (!usedTables.isEmpty()) {
@@ -917,8 +917,8 @@ public class DatasourceExplorerService {
 			return Optional.of(exactMatches.get(0));
 		}
 		if (exactMatches.size() > 1) {
-			throw new IllegalArgumentException("表 '%s' 映射到了多张当前可见表：%s".formatted(tableName,
-					String.join(", ", exactMatches)));
+			throw new IllegalArgumentException(
+					"表 '%s' 映射到了多张当前可见表：%s".formatted(tableName, String.join(", ", exactMatches)));
 		}
 		if (isQualifiedIdentifier(tableName) && !allowQualifiedFallback) {
 			return Optional.empty();
@@ -928,15 +928,15 @@ public class DatasourceExplorerService {
 			return Optional.of(leafMatches.get(0));
 		}
 		if (leafMatches.size() > 1) {
-			throw new IllegalArgumentException("表 '%s' 在当前可见表范围内存在歧义：%s".formatted(tableName,
-					String.join(", ", leafMatches)));
+			throw new IllegalArgumentException(
+					"表 '%s' 在当前可见表范围内存在歧义：%s".formatted(tableName, String.join(", ", leafMatches)));
 		}
 		return Optional.empty();
 	}
 
 	private IllegalArgumentException buildInvisibleTableException(ExplorerContext context, String tableName) {
-		return new IllegalArgumentException("表 '%s' 对当前 Agent 不可见。当前可见表：%s"
-			.formatted(tableName, String.join(", ", context.visibleTables())));
+		return new IllegalArgumentException(
+				"表 '%s' 对当前 Agent 不可见。当前可见表：%s".formatted(tableName, String.join(", ", context.visibleTables())));
 	}
 
 	private boolean isSelectedTable(ExplorerContext context, String tableName) {

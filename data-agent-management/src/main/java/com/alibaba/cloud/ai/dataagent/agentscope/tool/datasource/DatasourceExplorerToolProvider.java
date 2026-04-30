@@ -96,7 +96,7 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 			.inputSchema(INPUT_SCHEMA)
 			.build();
 		return Map.of(toolName, new AgentBoundDatasourceExplorerToolCallback(agentId, toolDefinition,
-					datasourceExplorerService, objectMapper));
+				datasourceExplorerService, objectMapper));
 	}
 
 	private AgentDatasource resolveActiveDatasource(String agentId) {
@@ -136,8 +136,7 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 				4. 如果需要写 SQL，先获取表结构和关系，再决定是否执行 SEARCH。
 				5. PREVIEW_ROWS 不是默认前置动作，只有样例值会实质影响 SQL 写法时才使用。
 				6. %s
-				"""
-			.formatted(datasource.getName(), datasource.getType(), visibleTables);
+				""".formatted(datasource.getName(), datasource.getType(), visibleTables);
 	}
 
 	private static final class AgentBoundDatasourceExplorerToolCallback implements ToolCallback {
@@ -174,7 +173,8 @@ public class DatasourceExplorerToolProvider implements AgentScopedToolProvider {
 				DatasourceExplorerRequest request = objectMapper.readValue(toolInput, DatasourceExplorerRequest.class);
 				validateRequest(request);
 				AgentRequest agentRequest = ToolContextRequestResolver.resolveGraphRequest(toolContext);
-				return objectMapper.writeValueAsString(datasourceExplorerService.execute(agentId, request, agentRequest));
+				return objectMapper
+					.writeValueAsString(datasourceExplorerService.execute(agentId, request, agentRequest));
 			}
 			catch (Exception ex) {
 				throw new IllegalStateException(

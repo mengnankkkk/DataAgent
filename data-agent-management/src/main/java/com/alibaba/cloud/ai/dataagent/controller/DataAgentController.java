@@ -50,13 +50,13 @@ public class DataAgentController {
 
 	@GetMapping(value = "/stream/search", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<ServerSentEvent<AgentResponse>> streamSearch(@RequestParam("agentId") String agentId,
-                                                             @RequestParam("threadId") String threadId,
-                                                             @RequestParam(value = "runtimeRequestId", required = false) String runtimeRequestId,
-                                                             @RequestParam("query") String query,
-                                                             @RequestParam(value = "clarifyCheckEnabled", required = false) boolean clarifyCheckEnabled,
-                                                             @RequestParam(value = "humanFeedback", required = false) boolean humanFeedback,
-                                                             @RequestParam(value = "humanFeedbackContent", required = false) String humanFeedbackContent,
-                                                             @RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan, ServerHttpResponse response) {
+			@RequestParam("threadId") String threadId,
+			@RequestParam(value = "runtimeRequestId", required = false) String runtimeRequestId,
+			@RequestParam("query") String query,
+			@RequestParam(value = "clarifyCheckEnabled", required = false) boolean clarifyCheckEnabled,
+			@RequestParam(value = "humanFeedback", required = false) boolean humanFeedback,
+			@RequestParam(value = "humanFeedbackContent", required = false) String humanFeedbackContent,
+			@RequestParam(value = "rejectedPlan", required = false) boolean rejectedPlan, ServerHttpResponse response) {
 		Long numericAgentId = parseAgentId(agentId);
 		chatSessionService.requireSessionForAgent(threadId, numericAgentId);
 		response.getHeaders().add("Cache-Control", "no-cache");

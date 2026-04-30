@@ -121,8 +121,7 @@ public interface ChatMessageMapper {
 			WHERE session_id = #{sessionId}
 			  AND LOWER(TRIM(COALESCE(message_type, ''))) = LOWER(#{messageType})
 			""")
-	int deleteBySessionIdAndMessageType(@Param("sessionId") String sessionId,
-			@Param("messageType") String messageType);
+	int deleteBySessionIdAndMessageType(@Param("sessionId") String sessionId, @Param("messageType") String messageType);
 
 	@Delete("""
 			DELETE FROM chat_message
