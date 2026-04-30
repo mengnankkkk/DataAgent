@@ -214,7 +214,7 @@
                 :onQuestionClick="handlePresetQuestionClick"
               />
               <div class="switch-group">
-                <div class="switch-item">
+                <div v-if="false" class="switch-item">
                   <span class="switch-label">开始澄清校验</span>
                   <el-switch
                     v-model="requestOptions.clarifyCheckEnabled"
@@ -255,7 +255,7 @@
               </div>
             </div>
           </div>
-          <div v-if="pendingClarify" class="clarify-banner">
+          <div v-if="false" class="clarify-banner">
             <div class="clarify-banner-header">
               <span class="clarify-banner-title">需要先澄清后再查库</span>
               <span class="clarify-banner-risk">riskLevel={{ pendingClarify.riskLevel }}</span>
@@ -1217,6 +1217,8 @@
             answerExplainVisible,
             pendingClarify,
           });
+          pendingClarify.value = null;
+          getSessionState(session.id).pendingClarify = null;
           currentMessages.value = await ChatService.getSessionMessages(
             session.id,
             requireResolvedAgentId(),
@@ -1287,10 +1289,8 @@
 
         isSubmittingMessage.value = true;
         const needsTitle = !currentSession.value?.title || currentSession.value.title === '新会话';
-        const activeClarify = pendingClarify.value;
+        const activeClarify: PendingClarifyState | null = null;
         const requestQuery = activeClarify?.originalQuery ?? userInput.value.trim();
-        const feedbackContent = activeClarify ? userInput.value.trim() : undefined;
-
         const userMessage: ChatMessage = {
           sessionId: currentSession.value.id,
           role: 'user',
@@ -1311,9 +1311,9 @@
           const request: AgentRequest = {
             agentId: String(requireResolvedAgentId()),
             query: requestQuery,
-            clarifyCheckEnabled: requestOptions.value.clarifyCheckEnabled,
-            humanFeedback: Boolean(activeClarify),
-            humanFeedbackContent: feedbackContent,
+            clarifyCheckEnabled: false,
+            humanFeedback: false,
+            humanFeedbackContent: undefined,
             rejectedPlan: false,
             threadId: currentSession.value.id,
             runtimeRequestId: createRuntimeRequestId(),
@@ -1442,7 +1442,7 @@
               if (sessionState.lastRequest) {
                 sessionState.lastRequest.threadId = response.threadId;
               }
-              if (isClarifyMetadata(response.metadata)) {
+              if (isClarifyMetadata(response.metadata) && request.clarifyCheckEnabled) {
                 const nextPendingClarify = buildPendingClarifyState(response.metadata);
                 sessionState.pendingClarify = nextPendingClarify;
                 if (currentSession.value?.id === sessionId) {
